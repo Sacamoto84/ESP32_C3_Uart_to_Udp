@@ -10,6 +10,8 @@ SettingsGyver sett("My Settings", &db);
 
 GyverDBFile db(&LittleFS, "/data.db", 500);
 
+#include <SPI.h>
+
 bool isValidIp(const char *ip)
 {
     struct in_addr addr;
@@ -44,6 +46,8 @@ void build(sets::Builder &b)
         }
     }
 
+    b.Number(kk::Serial2Bitrate, "Битрейт");
+
     if (b.Switch("Эхо", &eeprom.echo))
     {
         Serial.println(b.build.value);
@@ -72,6 +76,14 @@ void build(sets::Builder &b)
 
 void setup()
 {
+
+    // tft.init();
+    // tft.setRotation(3);
+    // tft.fillScreen(TFT_BLACK);
+    // tft.setTextSize(1);
+    // tft.setTextColor(TFT_GREEN);
+    // tft.setCursor(0, 0);
+
     Serial.begin(460800);
     LittleFS.begin(true);
 
@@ -80,11 +92,19 @@ void setup()
     int count = 0;
     bool needAP = false; // Если сети нет создаем точку доступа
 
+    delay(2000); // или больше
+
     WiFi.mode(WIFI_STA);
-    WiFi.begin(eeprom.WIFI_SSID, eeprom.WIFI_PASS);
+    // WiFi.begin(eeprom.WIFI_SSID, eeprom.WIFI_PASS);
+    WiFi.begin("TP-Link_BC0C", "58133514");
+
+    Serial.println(eeprom.WIFI_SSID);
+    Serial.println(eeprom.WIFI_PASS);
 
     while (WiFi.status() != WL_CONNECTED)
     {
+        Serial.println(eeprom.WIFI_SSID);
+        Serial.println(eeprom.WIFI_PASS);
         delay(500);
         Serial.print(".");
         count++;
@@ -104,6 +124,7 @@ void setup()
         // запускаем точку доступа
         WiFi.mode(WIFI_AP);
         WiFi.softAP("AP ESP32");
+        digitalWrite(8, LOW);
     }
 
     Serial.println();
@@ -137,7 +158,7 @@ static unsigned long lastPrint = 0;
 
 void loop()
 {
-    static GTimer<millis> tmr(2000, true);
+    static GTimer<millis> tmr(5000, true);
 
     sett.tick();
     db.tick();
