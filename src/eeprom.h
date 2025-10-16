@@ -1,11 +1,13 @@
-#pragma once
+#ifndef _eeprom_h
+#define _eeprom_h
 
 #include <GyverDBFile.h>
 #include <LittleFS.h>
 
+extern GyverDBFile db;
+
 // база данных для хранения настроек
 // будет автоматически записываться в файл при изменениях
-GyverDBFile db(&LittleFS, "/data.db", 500);
 
 // имена ячеек базы данных
 DB_KEYS(
@@ -17,7 +19,9 @@ DB_KEYS(
     Serial2Bitrate,
     timeout,
     WIFI_SSID,
-    WIFI_PASS);
+    WIFI_PASS,
+    apply
+    );
 
 // ## Получаем единственный экземпляр
 // EEPROM& settings = EEPROM::getInstance();
@@ -31,8 +35,8 @@ public:
     int SerialBitrate = 921600;   // Битрейт
     int Serial2Bitrate = 4000000; // Битрейт
     int timeout = 1000;           // Задержка новос строки
-    int echo = 1;                 // Эхо на Serial
-    int broadcast = 0;            // Использовать броадкаст пакеты
+    bool echo = true;                 // Эхо на Serial
+    bool broadcast = false;            // Использовать броадкаст пакеты
 
     String WIFI_SSID = "TP-Link_BC0C";
     String WIFI_PASS = "58133514";
@@ -64,10 +68,9 @@ private:
         db.begin();
         // создаёт ячейку соответствующего типа и записывает "начальные" данные,
         // если такой ячейки ещё нет в БД
-        
         db.init(kk::ipClient, "192.168.0.100");
-        db.init(kk::echo, 1);
-        db.init(kk::broadcast, 0);
+        db.init(kk::echo, true);
+        db.init(kk::broadcast, false);
         db.init(kk::timeout, 1000);
         db.init(kk::Serial2Bitrate, 9600);
 
@@ -83,3 +86,5 @@ private:
         ipClient = db.get(kk::ipClient); 
     }
 };
+
+#endif

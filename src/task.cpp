@@ -90,7 +90,7 @@ void uartTask(void *arg)
                             Serial.println(data);
                         }
 
-                        if (broadcast == 0)
+                        if (broadcast == false)
                             sendUdpMessageLen(&data[0], avalible, eeprom.ipClient.c_str());
                         else
                             sendUdpBroadcast(&data[0], avalible);

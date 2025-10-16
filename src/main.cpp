@@ -1,88 +1,72 @@
 #include "define.h"
 
+#include <GTimer.h>
+
+#include <lwip/inet.h>
+
 QueueHandle_t uartQueue;
 
-// #include "ESPAsyncUDP.h"
+SettingsGyver sett("My Settings", &db);
 
-SettingsGyver sett("My Settings");
+GyverDBFile db(&LittleFS, "/data.db", 500);
 
-// AsyncUDP udp;
-
-int slider;
-String input1;
-bool swit;
-
-sets::Logger logger(150); // размер буфера
+bool isValidIp(const char *ip)
+{
+    struct in_addr addr;
+    return inet_aton(ip, &addr); // вернёт true, если ip корректный
+}
 
 void build(sets::Builder &b)
 {
-    b.Slider("My slider", 0, 50, 1, "", &slider);
-    b.Input("My input", &input1);
-    b.Switch("Броадкаст", &swit);
+    Serial.println("build");
 
-    b.HTML("", R"(<a href="http://google.com">Google</a>)");
+    EEPROM &eeprom = EEPROM::getInstance();
 
-    if (b.Button())
+    String tempIpClient = eeprom.ipClient;
+
+    if (b.Input("Ip Адресс клиента", &eeprom.ipClient))
     {
-        Serial.println("Click!");
-        logger.println(millis());
-    }
+        Serial.println(b.build.value);
+        const char *ip = b.build.value.c_str();
 
-    b.Log(H(log), logger);
-    if (b.Button("Test"))
-    {
-        // печатать как в Serial в любом месте в программе
-        logger.println(millis());
-    }
-
-    if (b.beginGroup("Group 1"))
-    {
-        b.Input();
-
-        b.endGroup(); // закрыть группу
-    }
-
-    if (b.beginGroup("Group 2"))
-    {
-        b.Input();
-
-        b.endGroup(); // закрыть группу
-    }
-
-    {
-        sets::Menu m(b, "menu 1");
-        if (b.enterMenu())
-            Serial.println("menu 1");
-        // b.Input();
-    }
-    {
-        sets::Menu m(b, "menu 2");
-        if (b.enterMenu())
-            Serial.println("menu 2");
-        // b.Input();
+        if (isValidIp(ip))
         {
-            sets::Menu m(b, "menu 2.1");
-            if (b.enterMenu())
-                Serial.println("menu 2.1");
-            // b.Input();
+            Serial.printf("✅ Корректный IP: %s\n", ip);
+            db.set(kk::ipClient, ip);
+            tempIpClient = ip;
+            db.update();
         }
-
+        else
         {
-            sets::Row g(b);
-            // sets::Row g(b, "Row");
-
-            b.Slider("Slider");
-            b.LED();
-            b.Switch();
+            Serial.printf("❌ Некорректный IP: %s\n", ip);
+            eeprom.ipClient = tempIpClient;
+            sett.reload(true);
         }
+    }
 
-        {
-            sets::Row g(b, "Row");
+    if (b.Switch("Эхо", &eeprom.echo))
+    {
+        Serial.println(b.build.value);
+        db.set(kk::echo, b.build.value);
+        db.update();
+    }
 
-            b.Slider("Slider");
-            b.LED();
-            b.Switch();
-        }
+    if (b.Switch("Броадкаст", &eeprom.broadcast))
+    {
+        Serial.println(b.build.value);
+        db.set(kk::broadcast, b.build.value);
+        db.update();
+    }
+
+    {
+        sets::Group g(b, "WiFi");
+        b.Input(kk::WIFI_SSID, "SSID");
+        b.Input(kk::WIFI_PASS, "Password");
+    }
+
+    if (b.Button("Restart"))
+    {
+        ESP.restart();
     }
 }
 
@@ -130,7 +114,7 @@ void setup()
     sett.begin();
     sett.onBuild(build);
 
-    #define SERIAL2_SIZE_RX 1024 * 96
+#define SERIAL2_SIZE_RX 1024 * 96
 
     uart_config_t config = {
         .baud_rate = eeprom.Serial2Bitrate,
@@ -146,20 +130,20 @@ void setup()
     uart_flush_input(UART_NUM_0);
     xTaskCreate(uartTask, "uartTask", 10000, NULL, 1, NULL);
 
-    sendUdpMessage("UART to UDP C3 V1.0\n", eeprom.ipClient.c_str());
-
+    sendUdpMessage("UART to UDP C3 V1.1\n", eeprom.ipClient.c_str());
 }
 
 static unsigned long lastPrint = 0;
 
 void loop()
 {
+    static GTimer<millis> tmr(2000, true);
+
     sett.tick();
     db.tick();
 
-    if (millis() - lastPrint >= 2000)
+    if (tmr)
     {
-        lastPrint = millis();
         Serial.println(WiFi.localIP());
     }
 }

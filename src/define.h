@@ -31,6 +31,4 @@ extern void uartTask(void* arg);
 
 extern void sendUdpMessage(const char* msg, const char* ip);
 
-
-
 #endif
