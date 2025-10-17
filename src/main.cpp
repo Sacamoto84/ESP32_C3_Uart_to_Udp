@@ -84,6 +84,18 @@ void setup()
     // tft.setTextColor(TFT_GREEN);
     // tft.setCursor(0, 0);
 
+    pinMode(0, OUTPUT);
+    pinMode(1, OUTPUT);
+    pinMode(2, OUTPUT);
+    pinMode(3, OUTPUT);
+    pinMode(4, OUTPUT);
+    pinMode(5, OUTPUT);
+    pinMode(6, OUTPUT);
+    pinMode(7, OUTPUT);
+    pinMode(8, OUTPUT);
+    pinMode(9, OUTPUT);
+    pinMode(10, OUTPUT);
+
     Serial.begin(460800);
     LittleFS.begin(true);
 
@@ -92,11 +104,28 @@ void setup()
     int count = 0;
     bool needAP = false; // Если сети нет создаем точку доступа
 
-    delay(2000); // или больше
+    // Снижаем частоту CPU перед запуском WiFi
+    setCpuFrequencyMhz(80); // вместо 160 MHz
 
     WiFi.mode(WIFI_STA);
-    // WiFi.begin(eeprom.WIFI_SSID, eeprom.WIFI_PASS);
-    WiFi.begin("TP-Link_BC0C", "58133514");
+
+    // От слабого к сильному сигналу:
+    // WIFI_POWER_MINUS_1dBm    // ~2 dBm   (~80 мА пик)
+    // WIFI_POWER_2dBm          // ~5 dBm   (~100 мА пик)
+    // WIFI_POWER_8_5dBm        // ~8.5 dBm (~150 мА пик) ← вы сейчас тут
+    // WIFI_POWER_11dBm         // ~11 dBm  (~200 мА пик) ← попробуйте это
+    // WIFI_POWER_13dBm         // ~13 dBm  (~250 мА пик)
+    // WIFI_POWER_15dBm         // ~15 dBm  (~300 мА пик)
+    // WIFI_POWER_17dBm         // ~17 dBm  (~350 мА пик)
+    // WIFI_POWER_19dBm         // ~19 dBm  (~420 мА пик)
+    // WIFI_POWER_19_5dBm       // ~20 dBm  (~480 мА пик) ← максимум
+
+    // КРИТИЧНО: снижаем мощность TX
+    WiFi.setTxPower(WIFI_POWER_8_5dBm); // ~11 dBm вместо 20 dBm
+    // Это снизит пиковый ток на 50-100 мА!
+
+    WiFi.begin(eeprom.WIFI_SSID, eeprom.WIFI_PASS);
+    // WiFi.begin("TP-Link_BC0C", "58133514");
 
     Serial.println(eeprom.WIFI_SSID);
     Serial.println(eeprom.WIFI_PASS);
@@ -134,6 +163,9 @@ void setup()
 
     sett.begin();
     sett.onBuild(build);
+
+    // Теперь можно повысить мощность если нужно
+    // WiFi.setTxPower(WIFI_POWER_19_5dBm);
 
 #define SERIAL2_SIZE_RX 1024 * 96
 
