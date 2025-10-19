@@ -2,6 +2,8 @@
 
 #include <GTimer.h>
 
+#include <SPI.h>
+
 #include <lwip/inet.h>
 
 QueueHandle_t uartQueue;
@@ -10,7 +12,8 @@ SettingsGyver sett("My Settings", &db);
 
 GyverDBFile db(&LittleFS, "/data.db", 500);
 
-#include <SPI.h>
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
+                         OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
 
 bool isValidIp(const char *ip)
 {
@@ -46,7 +49,13 @@ void build(sets::Builder &b)
         }
     }
 
-    b.Number(kk::Serial2Bitrate, "Битрейт");
+    if (b.Number("Битрейт", &eeprom.Serial2Bitrate, 300, 4000000))
+    {
+        Serial.println(b.build.value);
+        int bits = b.build.value;
+        db.set(kk::Serial2Bitrate, bits);
+        db.update();
+    }
 
     if (b.Switch("Эхо", &eeprom.echo))
     {
@@ -68,9 +77,19 @@ void build(sets::Builder &b)
         b.Input(kk::WIFI_PASS, "Password");
     }
 
-    if (b.Button("Restart"))
+    if (b.Button("Сброс ESP32"))
     {
         ESP.restart();
+    }
+
+    if (b.Button("Выход -> Сброс", 0x25b18f))
+    {
+        Serial.println("✅ Выход -> Сброс");
+        pinMode(9, OUTPUT);
+        digitalWrite(9, LOW);
+        delay(100);
+        pinMode(9, OPEN_DRAIN);
+        digitalWrite(9, HIGH);
     }
 }
 
@@ -93,11 +112,20 @@ void setup()
     pinMode(6, OUTPUT);
     pinMode(7, OUTPUT);
     pinMode(8, OUTPUT);
-    pinMode(9, OUTPUT);
+    pinMode(9, OPEN_DRAIN);
     pinMode(10, OUTPUT);
 
     Serial.begin(460800);
     LittleFS.begin(true);
+
+    if (!display.begin(SSD1306_SWITCHCAPVCC))
+    {
+        Serial.println(F("SSD1306 allocation failed"));
+        for (;;)
+            ; // Don't proceed, loop forever
+    }
+
+    display.display();
 
     EEPROM &eeprom = EEPROM::getInstance();
 
