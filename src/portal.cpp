@@ -136,19 +136,19 @@ void build(sets::Builder &b)
             sets::Buttons g(b);
             if (b.Button("11dBm"))
             {
-                Serial.println(WIFI_POWER_11dBm);
+                Serial.println("WIFI_POWER_11dBm");
                 db.set(kk::wifiPower, WIFI_POWER_11dBm);
                 db.update();
             }
             if (b.Button("13dBm"))
             {
-                Serial.println(WIFI_POWER_13dBm);
+                Serial.println("WIFI_POWER_13dBm");
                 db.set(kk::wifiPower, WIFI_POWER_13dBm);
                 db.update();
             }
             if (b.Button("15dBm"))
             {
-                Serial.println(WIFI_POWER_15dBm);
+                Serial.println("WIFI_POWER_15dBm");
                 db.set(kk::wifiPower, WIFI_POWER_15dBm);
                 db.update();
             }
@@ -158,19 +158,19 @@ void build(sets::Builder &b)
 
             if (b.Button("17dBm"))
             {
-                Serial.println(WIFI_POWER_17dBm);
+                Serial.println("WIFI_POWER_17dBm");
                 db.set(kk::wifiPower, WIFI_POWER_17dBm);
                 db.update();
             }
             if (b.Button("19dBm"))
             {
-                Serial.println(WIFI_POWER_19dBm);
+                Serial.println("WIFI_POWER_19dBm");
                 db.set(kk::wifiPower, WIFI_POWER_19dBm);
                 db.update();
             }
             if (b.Button("19.5dBm"))
             {
-                Serial.println(WIFI_POWER_19_5dBm);
+                Serial.println("WIFI_POWER_19_5dBm");
                 db.set(kk::wifiPower, WIFI_POWER_19_5dBm);
                 db.update();
             }

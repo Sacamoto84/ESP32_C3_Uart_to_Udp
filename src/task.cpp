@@ -50,7 +50,6 @@ void sendUdpBroadcast(const char *msg, int len)
 
 
 unsigned long timingReadUART; // Переменная для хранения точки отсчета
-unsigned long timingTemp;
 
 char data[32768];
 
@@ -69,20 +68,20 @@ void uartTask(void *arg)
             if (event.type == UART_DATA)
             {
 
-                int avalible = uart_read_bytes(UART_NUM_0, data, event.size, 0);
+                int available = uart_read_bytes(UART_NUM_0, data, event.size, 0);
 
-                if (avalible == -1)
+                if (available == -1)
                     continue;
 
-                data[avalible] = '\0';
+                data[available] = '\0';
 
-                if ((avalible > 1023) || (millis() - timingReadUART > 50))
+                if ((available > 1023) || (millis() - timingReadUART > 50))
                 {
 
                     if (data[0] != 0)
                     {
                         timingReadUART = millis();
-                        eeprom.all_TX_to_UDP += avalible;
+                        eeprom.all_TX_to_UDP += available;
 
                         if (eeprom.echo)
                         {
@@ -90,10 +89,10 @@ void uartTask(void *arg)
                             Serial.println(data);
                         }
 
-                        if (broadcast == false)
-                            sendUdpMessageLen(&data[0], avalible, eeprom.ipClient.c_str());
+                        if (eeprom.broadcast == false)
+                            sendUdpMessageLen(&data[0], available, eeprom.ipClient.c_str());
                         else
-                            sendUdpBroadcast(&data[0], avalible);
+                            sendUdpBroadcast(&data[0], available);
                     }
                 }
             }

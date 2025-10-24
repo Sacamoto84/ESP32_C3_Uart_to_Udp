@@ -112,7 +112,6 @@ void setup()
 
     Serial.println();
     Serial.print("Connected: ");
-    String LocalIp = WiFi.localIP().toString();
     Serial.println(WiFi.localIP());
 
     sett.begin();
@@ -142,8 +141,6 @@ void setup()
     // Инициализация UDP на порту 82
     udp.begin(82);
 }
-
-static unsigned long lastPrint = 0;
 
 void loop()
 {
