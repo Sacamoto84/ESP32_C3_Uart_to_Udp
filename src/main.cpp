@@ -62,7 +62,7 @@ void setup()
     // WIFI_POWER_19_5dBm       // ~20 dBm  (~480 мА пик) ← максимум
 
     // КРИТИЧНО: снижаем мощность TX
-    WiFi.setTxPower(WIFI_POWER_8_5dBm); // ~11 dBm вместо 20 dBm
+    WiFi.setTxPower((wifi_power_t)eeprom.wifiPower); // ~11 dBm вместо 20 dBm
     // Это снизит пиковый ток на 50-100 мА!
 
     WiFi.begin(eeprom.WIFI_SSID, eeprom.WIFI_PASS);
@@ -73,17 +73,36 @@ void setup()
 
     while (WiFi.status() != WL_CONNECTED)
     {
-        Serial.println(eeprom.WIFI_SSID);
+        Serial.print(eeprom.WIFI_SSID);
         Serial.println(eeprom.WIFI_PASS);
         delay(500);
-        Serial.print(".");
+        Serial.print(" .");
         count++;
         if (count > 20)
         {
             // Сеть не найдена
             Serial.println("Wifi STA не найдена");
-            needAP = true; // Нужно создать точку доступа
-            break;         // Выходим
+            Serial.println("Снижаем мощность до 8.5dBm");
+            WiFi.setTxPower(WIFI_POWER_8_5dBm); // ~11 dBm вместо 20 dBm
+            WiFi.begin(eeprom.WIFI_SSID, eeprom.WIFI_PASS);
+            count = 0;
+            while (WiFi.status() != WL_CONNECTED)
+            {
+                Serial.print(eeprom.WIFI_SSID);
+                Serial.println(eeprom.WIFI_PASS);
+                delay(500);
+                Serial.print(".");
+                count++;
+                if (count > 20)
+                {
+                    // Сеть не найдена
+                    Serial.println("Wifi STA не найдена");
+                    needAP = true; // Нужно создать точку доступа
+                    break;         // Выходим
+                }
+            }
+
+            break; // Выходим
         }
     }
 
@@ -108,7 +127,7 @@ void setup()
     // Теперь можно повысить мощность если нужно
     // WiFi.setTxPower(WIFI_POWER_19_5dBm);
 
-    #define SERIAL2_SIZE_RX 1024 * 32
+#define SERIAL2_SIZE_RX 1024 * 32
 
     uart_config_t config = {
         .baud_rate = eeprom.Serial2Bitrate,
@@ -124,7 +143,7 @@ void setup()
     uart_flush_input(UART_NUM_0);
     xTaskCreate(uartTask, "uartTask", 10000, NULL, 1, NULL);
 
-    sendUdpMessage("UART to UDP C3 V1.4\n", eeprom.ipClient.c_str());
+    sendUdpMessage("UART to UDP C3 V1.5.1\n", eeprom.ipClient.c_str());
 
     // Инициализация UDP на порту 82
     udp.begin(82);
