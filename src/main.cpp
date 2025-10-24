@@ -36,8 +36,7 @@ void setup()
     if (!display.begin(SSD1306_SWITCHCAPVCC))
     {
         Serial.println(F("SSD1306 allocation failed"));
-        for (;;)
-            ; // Don't proceed, loop forever
+        for (;;); // Don't proceed, loop forever
     }
 
     display.display();
@@ -66,32 +65,27 @@ void setup()
     // Это снизит пиковый ток на 50-100 мА!
 
     WiFi.begin(eeprom.WIFI_SSID, eeprom.WIFI_PASS);
-    // WiFi.begin("TP-Link_BC0C", "58133514");
 
-    Serial.println(eeprom.WIFI_SSID);
-    Serial.println(eeprom.WIFI_PASS);
+    Serial.printf("SSID: %s\n", eeprom.WIFI_SSID);
+    Serial.printf("PASS: %s\n", eeprom.WIFI_PASS);
 
     while (WiFi.status() != WL_CONNECTED)
     {
-        Serial.print(eeprom.WIFI_SSID);
-        Serial.println(eeprom.WIFI_PASS);
+        Serial.print(".");
         delay(500);
-        Serial.print(" .");
         count++;
         if (count > 20)
         {
             // Сеть не найдена
-            Serial.println("Wifi STA не найдена");
+            Serial.println("\nWifi STA не найдена");
             Serial.println("Снижаем мощность до 8.5dBm");
             WiFi.setTxPower(WIFI_POWER_8_5dBm); // ~11 dBm вместо 20 dBm
             WiFi.begin(eeprom.WIFI_SSID, eeprom.WIFI_PASS);
             count = 0;
             while (WiFi.status() != WL_CONNECTED)
             {
-                Serial.print(eeprom.WIFI_SSID);
-                Serial.println(eeprom.WIFI_PASS);
-                delay(500);
                 Serial.print(".");
+                delay(500);
                 count++;
                 if (count > 20)
                 {
@@ -127,7 +121,7 @@ void setup()
     // Теперь можно повысить мощность если нужно
     // WiFi.setTxPower(WIFI_POWER_19_5dBm);
 
-#define SERIAL2_SIZE_RX 1024 * 32
+    #define SERIAL2_SIZE_RX 1024 * 32
 
     uart_config_t config = {
         .baud_rate = eeprom.Serial2Bitrate,
