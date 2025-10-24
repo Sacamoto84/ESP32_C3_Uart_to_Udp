@@ -1,107 +1,22 @@
 #include "define.h"
-
 #include <GTimer.h>
-
 #include <SPI.h>
-
 #include <lwip/inet.h>
 
+WiFiUDP udp; // Объект для работы с UDP
+
+byte buffer[1024]; // Буфер для входящих данных
 QueueHandle_t uartQueue;
-
 SettingsGyver sett("My Settings", &db);
-
 GyverDBFile db(&LittleFS, "/data.db", 500);
 
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
                          OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
 
-bool isValidIp(const char *ip)
-{
-    struct in_addr addr;
-    return inet_aton(ip, &addr); // вернёт true, если ip корректный
-}
-
-void build(sets::Builder &b)
-{
-    Serial.println("build");
-
-    EEPROM &eeprom = EEPROM::getInstance();
-
-    String tempIpClient = eeprom.ipClient;
-
-    if (b.Input("Ip Адресс клиента", &eeprom.ipClient))
-    {
-        Serial.println(b.build.value);
-        const char *ip = b.build.value.c_str();
-
-        if (isValidIp(ip))
-        {
-            Serial.printf("✅ Корректный IP: %s\n", ip);
-            db.set(kk::ipClient, ip);
-            tempIpClient = ip;
-            db.update();
-        }
-        else
-        {
-            Serial.printf("❌ Некорректный IP: %s\n", ip);
-            eeprom.ipClient = tempIpClient;
-            sett.reload(true);
-        }
-    }
-
-    if (b.Number("Битрейт", &eeprom.Serial2Bitrate, 300, 4000000))
-    {
-        Serial.println(b.build.value);
-        int bits = b.build.value;
-        db.set(kk::Serial2Bitrate, bits);
-        db.update();
-    }
-
-    if (b.Switch("Эхо", &eeprom.echo))
-    {
-        Serial.println(b.build.value);
-        db.set(kk::echo, b.build.value);
-        db.update();
-    }
-
-    if (b.Switch("Броадкаст", &eeprom.broadcast))
-    {
-        Serial.println(b.build.value);
-        db.set(kk::broadcast, b.build.value);
-        db.update();
-    }
-
-    {
-        sets::Group g(b, "WiFi");
-        b.Input(kk::WIFI_SSID, "SSID");
-        b.Input(kk::WIFI_PASS, "Password");
-    }
-
-    if (b.Button("Сброс ESP32"))
-    {
-        ESP.restart();
-    }
-
-    if (b.Button("Выход -> Сброс", 0x25b18f))
-    {
-        Serial.println("✅ Выход -> Сброс");
-        pinMode(9, OUTPUT);
-        digitalWrite(9, LOW);
-        delay(100);
-        pinMode(9, OPEN_DRAIN);
-        digitalWrite(9, HIGH);
-    }
-}
+EEPROM &eeprom = EEPROM::getInstance();
 
 void setup()
 {
-
-    // tft.init();
-    // tft.setRotation(3);
-    // tft.fillScreen(TFT_BLACK);
-    // tft.setTextSize(1);
-    // tft.setTextColor(TFT_GREEN);
-    // tft.setCursor(0, 0);
 
     pinMode(0, OUTPUT);
     pinMode(1, OUTPUT);
@@ -126,8 +41,6 @@ void setup()
     }
 
     display.display();
-
-    EEPROM &eeprom = EEPROM::getInstance();
 
     int count = 0;
     bool needAP = false; // Если сети нет создаем точку доступа
@@ -195,7 +108,7 @@ void setup()
     // Теперь можно повысить мощность если нужно
     // WiFi.setTxPower(WIFI_POWER_19_5dBm);
 
-#define SERIAL2_SIZE_RX 1024 * 96
+    #define SERIAL2_SIZE_RX 1024 * 32
 
     uart_config_t config = {
         .baud_rate = eeprom.Serial2Bitrate,
@@ -211,7 +124,10 @@ void setup()
     uart_flush_input(UART_NUM_0);
     xTaskCreate(uartTask, "uartTask", 10000, NULL, 1, NULL);
 
-    sendUdpMessage("UART to UDP C3 V1.1\n", eeprom.ipClient.c_str());
+    sendUdpMessage("UART to UDP C3 V1.4\n", eeprom.ipClient.c_str());
+
+    // Инициализация UDP на порту 82
+    udp.begin(82);
 }
 
 static unsigned long lastPrint = 0;
@@ -226,5 +142,32 @@ void loop()
     if (tmr)
     {
         Serial.println(WiFi.localIP());
+    }
+
+    if (eeprom.externalScreen)
+    {
+        // Обработка входящих UDP-пакетов
+        int packetSize = udp.parsePacket();
+        if (packetSize)
+        {
+            // Serial.printf("Получен UDP-пакет размером %d байт от %s\n", packetSize, udp.remoteIP().toString().c_str());
+            if (packetSize == 1024) // Ожидаем ровно 1024 байта
+            {
+                int bytesRead = udp.read(display.getBuffer(), 1024);
+                if (bytesRead == 1024)
+                    display.display(); // Получено 1024 байт, обновляем дисплей
+                else
+                    Serial.printf("Ошибка: прочитано только %d байт\n", bytesRead);
+            }
+            else
+            {
+                // Serial.printf("Ошибка: размер пакета %d байт, ожидалось 1024\n", packetSize);
+                //  Очистка буфера, если пакет некорректного размера
+                while (udp.available())
+                {
+                    udp.read();
+                }
+            }
+        }
     }
 }

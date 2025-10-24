@@ -42,11 +42,9 @@
 #define AP_PASS "58133514"
 
 extern QueueHandle_t uartQueue;
-
 extern GyverDBFile db;
-
 extern void uartTask(void* arg);
-
 extern void sendUdpMessage(const char* msg, const char* ip);
+extern void build(sets::Builder &b);
 
 #endif

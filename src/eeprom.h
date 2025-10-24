@@ -20,7 +20,8 @@ DB_KEYS(
     timeout,
     WIFI_SSID,
     WIFI_PASS,
-    apply
+    apply,
+    externalScreen
     );
 
 // ## Получаем единственный экземпляр
@@ -44,6 +45,8 @@ public:
     int all_TX_to_UDP;
     int all_RX_from_UDP;
 
+    bool externalScreen = false; //Включение режима внешнего экрана по UDP порт 82 1024 байт 
+    
     //-------------------------------------
 
     //-------------------------------------
@@ -74,9 +77,9 @@ private:
         db.init(kk::broadcast, false);
         db.init(kk::timeout, 1000);
         db.init(kk::Serial2Bitrate, 9600);
-
         db.init(kk::WIFI_SSID, "TP-Link_BC0C");
         db.init(kk::WIFI_PASS, "58133514");
+        db.init(kk::externalScreen, false);
 
         echo = db.get(kk::echo);
         broadcast = db.get(kk::broadcast);
@@ -85,6 +88,8 @@ private:
         WIFI_SSID = db.get(kk::WIFI_SSID);
         WIFI_PASS = db.get(kk::WIFI_PASS);
         ipClient = db.get(kk::ipClient); 
+
+        externalScreen = db.get(kk::externalScreen); 
     }
 };
 
