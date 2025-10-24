@@ -12,6 +12,8 @@ bool isValidIp(const char *ip)
 
 void build(sets::Builder &b)
 {
+    EEPROM &eeprom = EEPROM::getInstance();
+
     Serial.println("build");
 
     String tempIpClient = eeprom.ipClient;

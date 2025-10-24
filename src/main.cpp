@@ -13,8 +13,6 @@ GyverDBFile db(&LittleFS, "/data.db", 500);
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
                          OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
 
-EEPROM &eeprom = EEPROM::getInstance();
-
 void setup()
 {
 
@@ -32,6 +30,8 @@ void setup()
 
     Serial.begin(460800);
     LittleFS.begin(true);
+
+    EEPROM &eeprom = EEPROM::getInstance();
 
     if (!display.begin(SSD1306_SWITCHCAPVCC))
     {
@@ -134,6 +134,8 @@ static unsigned long lastPrint = 0;
 
 void loop()
 {
+    EEPROM &eeprom = EEPROM::getInstance();
+
     static GTimer<millis> tmr(5000, true);
 
     sett.tick();
