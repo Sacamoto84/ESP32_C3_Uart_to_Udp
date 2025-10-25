@@ -14,7 +14,9 @@ void screenLoop()
 
     display.clearDisplay();
 
-    //display.drawRect(0, 0, 128, 64, WHITE);
+    // display.drawRect(0, 0, 128, 64, WHITE);
+
+    display.setTextSize(1);
 
     display.setCursor(0, 2);
     display.print("IP: ");
@@ -30,19 +32,26 @@ void screenLoop()
 
     display.setCursor(0, 29);
     display.print("Broadcast: ");
-    if (db.get(kk::broadcast)) display.print("True"); else  display.print("False");
-  
+    if (db.get(kk::broadcast))
+        display.print("True");
+    else
+        display.print("False");
 
     display.setCursor(0, 38);
-    display.print("Echo: ");
-    if (db.get(kk::echo)) display.print("True"); else  display.print("False");
+    // display.print("Echo: ");
+    if (db.get(kk::echo))
+        display.print("Echo:      True");
+    else
+        display.print("Echo:     False");
 
+    //display.drawFastHLine(0, 47, 128, WHITE);
+    display.setTextSize(2);
     display.setCursor(0, 48);
-    display.print("TX: ");
+    display.print("TX:");
     display.print(eeprom.all_TX_to_UDP);
 
-
-    display.setCursor(110, 55);
+    display.setTextSize(1);
+    display.setCursor(110, 0);
     display.println(rssi);
 
     display.display();
