@@ -40,4 +40,14 @@ extern void uartTask(void* arg);
 extern void sendUdpMessage(const char* msg, const char* ip);
 extern void build(sets::Builder &b);
 
+// Функции инициализации из setup.cpp
+extern void initPins();
+extern void initSerialAndFS();
+extern void initDisplay();
+extern void initWiFi();
+extern void initSettings();
+extern void initUART();
+extern void initUDP();
+extern void setup();
+
 #endif

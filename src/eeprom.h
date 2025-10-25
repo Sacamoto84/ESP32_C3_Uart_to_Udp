@@ -31,24 +31,24 @@ class EEPROM
 {
 public:
 
-    String ipClient;
+    //String ipClient;
 
     // Глобальный настройки
-    int SerialBitrate = 921600;   // Битрейт
-    int Serial2Bitrate = 4000000; // Битрейт
-    int timeout = 1000;           // Задержка новос строки
-    bool echo = true;                 // Эхо на Serial
-    bool broadcast = false;            // Использовать броадкаст пакеты
+    //int SerialBitrate = 921600;   // Битрейт
+    //int Serial2Bitrate = 4000000; // Битрейт
+    //int timeout = 1000;           // Задержка новос строки
+    //bool echo = true;                 // Эхо на Serial
+    //bool broadcast = false;            // Использовать броадкаст пакеты
 
-    String WIFI_SSID = "TP-Link_BC0C";
-    String WIFI_PASS = "58133514";
+    //String WIFI_SSID = "TP-Link_BC0C";
+    //String WIFI_PASS = "58133514";
 
     int all_TX_to_UDP;
     int all_RX_from_UDP;
 
-    bool externalScreen = false; //Включение режима внешнего экрана по UDP порт 82 1024 байт 
+    //bool externalScreen = false; //Включение режима внешнего экрана по UDP порт 82 1024 байт 
     
-    uint8_t wifiPower = WIFI_POWER_8_5dBm;
+    //uint8_t wifiPower = WIFI_POWER_8_5dBm;
 
     //-------------------------------------
 
@@ -72,7 +72,7 @@ private:
         // Инициализация по умолчанию, аналог init блока в Kotlin
         // запуск и инициализация полей БД
         db.begin();
-        
+    
         // создаёт ячейку соответствующего типа и записывает "начальные" данные,
         // если такой ячейки ещё нет в БД
         db.init(kk::ipClient, "192.168.0.100");
@@ -83,17 +83,23 @@ private:
         db.init(kk::WIFI_SSID, "TP-Link_BC0C");
         db.init(kk::WIFI_PASS, "58133514");
         db.init(kk::externalScreen, false);
-        db.init(kk::wifiPower, WIFI_POWER_8_5dBm);
+        db.init(kk::wifiPower, 34);
 
-        echo = db.get(kk::echo);
-        broadcast = db.get(kk::broadcast);
-        timeout = db.get(kk::timeout);
-        Serial2Bitrate = db.get(kk::Serial2Bitrate);
-        WIFI_SSID = db.get(kk::WIFI_SSID);
-        WIFI_PASS = db.get(kk::WIFI_PASS);
-        ipClient = db.get(kk::ipClient); 
-        externalScreen = db.get(kk::externalScreen); 
-        wifiPower = db.get(kk::wifiPower);
+        // echo = db.get(kk::echo);
+        // broadcast = db.get(kk::broadcast);
+        // timeout = db.get(kk::timeout);
+        // Serial2Bitrate = db.get(kk::Serial2Bitrate);
+        // WIFI_SSID = db.get(kk::WIFI_SSID);
+        // WIFI_PASS = db.get(kk::WIFI_PASS);
+        // ipClient = db.get(kk::ipClient); 
+        //externalScreen = db.get(kk::externalScreen); 
+        //wifiPower = db.get(kk::wifiPower);
+
+        // Serial.printf("-====================-");
+        // Serial.printf("Эхо %b", echo);
+        // Serial.printf("Броадкаст %b", broadcast);
+        // Serial.printf("-====================-");
+
     }
 };
 

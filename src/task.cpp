@@ -83,14 +83,14 @@ void uartTask(void *arg)
                         timingReadUART = millis();
                         eeprom.all_TX_to_UDP += available;
 
-                        if (eeprom.echo)
+                        if (db.get(kk::echo))
                         {
                             Serial.println("🌐 >>UDP_tx_task>>Эхо:");
                             Serial.println(data);
                         }
 
-                        if (eeprom.broadcast == false)
-                            sendUdpMessageLen(&data[0], available, eeprom.ipClient.c_str());
+                        if (db.get(kk::broadcast) == false)
+                            sendUdpMessageLen(&data[0], available, db.get(kk::ipClient).c_str());
                         else
                             sendUdpBroadcast(&data[0], available);
                     }
