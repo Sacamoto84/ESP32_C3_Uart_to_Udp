@@ -27,24 +27,21 @@ void screenLoop()
     display.print(db.get(kk::ipClient));
 
     display.setCursor(0, 20);
-    display.print("Birtate: ");
+    display.print("Bitrate: ");
     display.print(db.get(kk::Serial2Bitrate));
 
     display.setCursor(0, 29);
-    display.print("Broadcast: ");
     if (db.get(kk::broadcast))
-        display.print("True");
+        display.print("Broadcast: True");
     else
-        display.print("False");
+        display.print("Broadcast: False");
 
     display.setCursor(0, 38);
-    // display.print("Echo: ");
     if (db.get(kk::echo))
         display.print("Echo:      True");
     else
-        display.print("Echo:     False");
+        display.print("Echo:      False");
 
-    //display.drawFastHLine(0, 47, 128, WHITE);
     display.setTextSize(2);
     display.setCursor(0, 48);
     display.print("TX:");

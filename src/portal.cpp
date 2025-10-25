@@ -65,9 +65,9 @@ void build(sets::Builder &b)
     }
 
     b.Number(kk::Serial2Bitrate, "Битрейт", nullptr, 300, 4000000);
-    b.Switch(kk::echo, "Эхо");
     b.Switch(kk::broadcast, "Броадкаст");
-
+    b.Switch(kk::echo, "Эхо");
+    
     {
         sets::Group g(b, "WiFi");
         b.Input(kk::WIFI_SSID, "SSID");
