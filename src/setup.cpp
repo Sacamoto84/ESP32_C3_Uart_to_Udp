@@ -78,8 +78,6 @@ void initWiFi()
 
     WiFi.begin(db.get(kk::WIFI_SSID), db.get(kk::WIFI_PASS));
 
-    // Serial.printf("SSID: %s\n", eeprom.WIFI_SSID);
-    // Serial.printf("PASS: %s\n", eeprom.WIFI_PASS);
     display.setTextSize(1);              // Normal 1:1 pixel scale
     display.setTextColor(SSD1306_WHITE); // Draw white text
     display.setCursor(0, 0);             // Start at top-left corner
@@ -178,7 +176,7 @@ void initUART()
     uart_flush_input(UART_NUM_0);
     xTaskCreate(uartTask, "uartTask", 10000, NULL, 1, NULL);
 
-    sendUdpMessage("UART to UDP C3 V1.5.4\n", db.get(kk::ipClient).c_str());
+    sendUdpMessage("UART to UDP C3 V1.5.5\n", db.get(kk::ipClient).c_str());
 }
 
 // Функция инициализации UDP

@@ -14,8 +14,6 @@ void screenLoop()
 
     display.clearDisplay();
 
-    // display.drawRect(0, 0, 128, 64, WHITE);
-
     display.setTextSize(1);
 
     display.setCursor(0, 2);

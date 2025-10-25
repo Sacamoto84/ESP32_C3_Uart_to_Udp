@@ -50,4 +50,7 @@ extern void initUART();
 extern void initUDP();
 extern void setup();
 
+// Функция экрана
+extern void screenLoop();
+
 #endif

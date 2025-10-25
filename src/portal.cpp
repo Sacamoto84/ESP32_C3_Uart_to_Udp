@@ -100,19 +100,18 @@ void build(sets::Builder &b)
 
     {
         sets::Menu m(b, "Мощность Wifi");
-        String power;
         b.enterMenu();
-        int poer = db.get(kk::wifiPower);
+        int currentPower = db.get(kk::wifiPower);
         b.Label("Мощность", WifiCurrentPowerString(db.get(kk::wifiPower)));
         for (int i = 0; i < sizeof(wifiPowerOptions) / sizeof(WifiPowerOption); ++i)
         {
-            addWifiPowerButton(b, wifiPowerOptions[i], poer);
+            addWifiPowerButton(b, wifiPowerOptions[i], currentPower);
         }
-        
+
     }
 
     {
-        b.Label("Версия 1.5.4");
+        b.Label("Версия 1.5.5");
     }
 }
 
