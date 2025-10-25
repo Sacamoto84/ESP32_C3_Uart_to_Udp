@@ -13,6 +13,8 @@ GyverDBFile db(&LittleFS, "/data.db", 500);
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
                          OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
 
+extern void screenLoop();
+
 void loop()
 {
     EEPROM &eeprom = EEPROM::getInstance();
@@ -52,5 +54,11 @@ void loop()
                 }
             }
         }
+    }else
+    {
+        screenLoop();
     }
 }
+
+
+

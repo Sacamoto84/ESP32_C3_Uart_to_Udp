@@ -5,6 +5,37 @@
 extern SettingsGyver sett;
 extern EEPROM &eeprom;
 
+struct WifiPowerOption
+{
+    wifi_power_t powerEnum;
+    int dbValue;
+    const char *label;
+};
+
+WifiPowerOption wifiPowerOptions[] = {
+    {WIFI_POWER_MINUS_1dBm, -4, "-1dbm (-4)"},
+    {WIFI_POWER_2dBm, 8, "2dBm (8)"},
+    {WIFI_POWER_8_5dBm, 34, "8.5dBm (34)"},
+    {WIFI_POWER_11dBm, 44, "11dBm (44)"},
+    {WIFI_POWER_13dBm, 52, "13dBm (52)"},
+    {WIFI_POWER_15dBm, 60, "15dBm (60)"},
+    {WIFI_POWER_17dBm, 68, "17dBm (68)"},
+    {WIFI_POWER_19dBm, 76, "19dBm (76)"},
+    {WIFI_POWER_19_5dBm, 78, "19.5dBm (78)"}};
+
+void addWifiPowerButton(sets::Builder &b, const WifiPowerOption &opt, int currentPower)
+{
+    uint32_t color = (currentPower != opt.dbValue) ? 0x808080 : 0xd55f30;
+    sets::Buttons g(b);
+    if (b.Button(opt.label, color))
+    {
+        Serial.println(opt.label);
+        db.set(kk::wifiPower, opt.dbValue);
+        db.update();
+        b.reload();
+    }
+}
+
 bool isValidIp(const char *ip)
 {
     struct in_addr addr;
@@ -12,8 +43,6 @@ bool isValidIp(const char *ip)
 }
 
 String WifiCurrentPowerString(int);
-
-
 
 void build(sets::Builder &b)
 {
@@ -35,18 +64,18 @@ void build(sets::Builder &b)
         }
     }
 
-    b.Number(kk::Serial2Bitrate, "Битрейт",nullptr ,300, 4000000);
+    b.Number(kk::Serial2Bitrate, "Битрейт", nullptr, 300, 4000000);
     b.Switch(kk::echo, "Эхо");
     b.Switch(kk::broadcast, "Броадкаст");
-  
+
     {
         sets::Group g(b, "WiFi");
         b.Input(kk::WIFI_SSID, "SSID");
         b.Input(kk::WIFI_PASS, "Password");
     }
 
-    b.Switch(kk::externalScreen,"Внешний экран по UDP 82 порту");
-   
+    b.Switch(kk::externalScreen, "Внешний экран по UDP 82 порту");
+
     if (b.Button("Сброс ESP32"))
     {
         ESP.restart();
@@ -70,140 +99,20 @@ void build(sets::Builder &b)
     }
 
     {
-        b.Label("Версия 1.5.1");
+        sets::Menu m(b, "Мощность Wifi");
+        String power;
+        b.enterMenu();
+        int poer = db.get(kk::wifiPower);
+        b.Label("Мощность", WifiCurrentPowerString(db.get(kk::wifiPower)));
+        for (int i = 0; i < sizeof(wifiPowerOptions) / sizeof(WifiPowerOption); ++i)
+        {
+            addWifiPowerButton(b, wifiPowerOptions[i], poer);
+        }
+        
     }
 
     {
-        sets::Menu m(b, "Мощность Wifi");
-
-        String power;
-        if (b.enterMenu())
-        {
-            // Serial.println("menu 1");
-            // power = WifiCurrentPowerString(eeprom.wifiPower);
-            // Serial.printf("Current TX Power: %s\n", power);
-        }
-
-        int poer = db.get(kk::wifiPower);
-
-        b.Label("Мощность", WifiCurrentPowerString(db.get(kk::wifiPower)));
-
-        {
-            sets::Buttons g(b);
-
-            uint32_t color0;
-            uint32_t color1;
-            uint32_t color2;
-            
-            if (poer != WIFI_POWER_MINUS_1dBm) color0 = 0x808080; else color0 = 0xd55f30;
-            if (poer != WIFI_POWER_2dBm) color1 = 0x808080; else color1 = 0xd55f30;
-            if (poer != WIFI_POWER_8_5dBm) color2 = 0x808080; else color2 = 0xd55f30;
-            
-            if (b.Button("-1dbm (-4)", color0))
-            {
-                Serial.println("WIFI_POWER_MINUS_1dBm");
-                db.set(kk::wifiPower, -4);
-                db.update();
-                power = WifiCurrentPowerString(-4);
-                b.reload();
-                //WiFi.setTxPower((wifi_power_t)-4); 
-            }
-
-            if (b.Button("2dBm (8)", color1))
-            {
-                Serial.println("WIFI_POWER_2dBm");
-                db.set(kk::wifiPower, 8);
-                db.update();
-                power = WifiCurrentPowerString(8);
-                b.reload();
-                //WiFi.setTxPower((wifi_power_t)8); 
-            }
-            if (b.Button("8.5dBm (34)", color2))
-            {
-                Serial.println("WIFI_POWER_8_5dBm");
-                db.set(kk::wifiPower, 34);
-                db.update();
-                power = WifiCurrentPowerString(34);
-                b.reload();
-                //WiFi.setTxPower((wifi_power_t)34); 
-            }
-        }
-        {
-            uint32_t color3;
-            uint32_t color4;
-            uint32_t color5;
-
-            if (poer != WIFI_POWER_11dBm) color3 = 0x808080; else color3 = 0xd55f30;
-            if (poer != WIFI_POWER_13dBm) color4 = 0x808080; else color4 = 0xd55f30;
-            if (poer != WIFI_POWER_15dBm) color5 = 0x808080; else color5 = 0xd55f30;
-
-            sets::Buttons g(b);
-            if (b.Button("11dBm (44)", color3))
-            {
-                Serial.println("WIFI_POWER_11dBm");
-                db.set(kk::wifiPower, 44);
-                db.update();
-                power = WifiCurrentPowerString(44);
-                b.reload();
-                //WiFi.setTxPower((wifi_power_t)44); 
-            }
-            if (b.Button("13dBm (60)", color4))
-            {
-                Serial.println("WIFI_POWER_13dBm");
-                db.set(kk::wifiPower, 52);
-                db.update();
-                power = WifiCurrentPowerString(52);
-                b.reload();
-                //WiFi.setTxPower((wifi_power_t)52); 
-            }
-            if (b.Button("15dBm (60)", color5))
-            {
-                Serial.println("WIFI_POWER_15dBm");
-                db.set(kk::wifiPower, 60);
-                db.update();
-                power = WifiCurrentPowerString(60);
-                b.reload();
-                //WiFi.setTxPower((wifi_power_t)60); 
-            }
-        }
-        {
-            uint32_t color6;
-            uint32_t color7;
-            uint32_t color8;
-            
-            if (poer != WIFI_POWER_17dBm) color6 = 0x808080; else color6 = 0xd55f30;
-            if (poer != WIFI_POWER_19dBm) color7 = 0x808080; else color7 = 0xd55f30;
-            if (poer != WIFI_POWER_19_5dBm) color8 = 0x808080; else color8 = 0xd55f30;
-
-            sets::Buttons g(b);
-        
-            if (b.Button("17dBm (68)", color6))
-            {
-                Serial.println("WIFI_POWER_17dBm");
-                db.set(kk::wifiPower, 68);
-                db.update();
-                power = WifiCurrentPowerString(68);
-                b.reload();
-                //WiFi.setTxPower((wifi_power_t)68); 
-            }
-            if (b.Button("19dBm (76)", color7))
-            {
-                Serial.println("WIFI_POWER_19dBm");
-                db.set(kk::wifiPower, 76);
-                db.update();
-                power = WifiCurrentPowerString(76);
-                b.reload();
-            }
-            if (b.Button("19.5dBm (78)", color8))
-            {
-                Serial.println("WIFI_POWER_19_5dBm");
-                db.set(kk::wifiPower, 78);
-                db.update();
-                power = WifiCurrentPowerString(78);
-                b.reload();
-                //WiFi.setTxPower((wifi_power_t)78); 
-            }
-        }
+        b.Label("Версия 1.5.4");
     }
 }
 

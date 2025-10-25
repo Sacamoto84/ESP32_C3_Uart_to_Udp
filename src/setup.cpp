@@ -3,7 +3,8 @@
 #include <SPI.h>
 #include <lwip/inet.h>
 
-extern WiFiUDP udp; // Объект для работы с UDP
+extern String WifiCurrentPowerString(int);
+extern WiFiUDP udp;       // Объект для работы с UDP
 extern byte buffer[1024]; // Буфер для входящих данных
 extern QueueHandle_t uartQueue;
 extern SettingsGyver sett;
@@ -39,7 +40,8 @@ void initDisplay()
     if (!display.begin(SSD1306_SWITCHCAPVCC))
     {
         Serial.println(F("SSD1306 allocation failed"));
-        for (;;); // Don't proceed, loop forever
+        for (;;)
+            ; // Don't proceed, loop forever
     }
 
     display.display();
@@ -76,11 +78,21 @@ void initWiFi()
 
     WiFi.begin(db.get(kk::WIFI_SSID), db.get(kk::WIFI_PASS));
 
-    //Serial.printf("SSID: %s\n", eeprom.WIFI_SSID);
-    //Serial.printf("PASS: %s\n", eeprom.WIFI_PASS);
+    // Serial.printf("SSID: %s\n", eeprom.WIFI_SSID);
+    // Serial.printf("PASS: %s\n", eeprom.WIFI_PASS);
+    display.setTextSize(1);              // Normal 1:1 pixel scale
+    display.setTextColor(SSD1306_WHITE); // Draw white text
+    display.setCursor(0, 0);             // Start at top-left corner
+    display.cp437(true);                 // Use full 256 char 'Code Page 437' font
+    display.clearDisplay();
+    display.print("Connecting ");
+    display.println(WifiCurrentPowerString(db.get(kk::wifiPower)));
+    display.display();
 
     while (WiFi.status() != WL_CONNECTED)
     {
+        display.print(".");
+        display.display();
         Serial.print(db.get(kk::wifiPower));
         Serial.print(".");
         delay(500);
@@ -88,6 +100,8 @@ void initWiFi()
         if (count > 20)
         {
             // Сеть не найдена
+            display.println("\nSet Power to 8.5 dBm");
+            display.display();
             Serial.println("\nWifi STA не найдена");
             Serial.println("Снижаем мощность до 8.5dBm");
             WiFi.setTxPower(WIFI_POWER_8_5dBm); // ~11 dBm вместо 20 dBm
@@ -95,6 +109,8 @@ void initWiFi()
             count = 0;
             while (WiFi.status() != WL_CONNECTED)
             {
+                display.print(".");
+                display.display();
                 Serial.print(".");
                 delay(500);
                 count++;
@@ -114,12 +130,17 @@ void initWiFi()
     // Создаем точку доступа
     if (needAP)
     {
+        display.println("\nStart APmode");
+        display.display();
         Serial.println("Запуск точки доступа");
         // запускаем точку доступа
         WiFi.mode(WIFI_AP);
         WiFi.softAP("AP ESP32");
         digitalWrite(8, LOW);
     }
+
+    display.println("\nConnected");
+    display.display();
 
     Serial.println();
     Serial.print("Connected: ");
@@ -141,7 +162,7 @@ void initUART()
     // Теперь можно повысить мощность если нужно
     // WiFi.setTxPower(WIFI_POWER_19_5dBm);
 
-    #define SERIAL2_SIZE_RX 1024 * 32
+#define SERIAL2_SIZE_RX 1024 * 32
 
     uart_config_t config = {
         .baud_rate = db.get(kk::Serial2Bitrate),
@@ -157,7 +178,7 @@ void initUART()
     uart_flush_input(UART_NUM_0);
     xTaskCreate(uartTask, "uartTask", 10000, NULL, 1, NULL);
 
-    sendUdpMessage("UART to UDP C3 V1.5.1\n", db.get(kk::ipClient).c_str());
+    sendUdpMessage("UART to UDP C3 V1.5.4\n", db.get(kk::ipClient).c_str());
 }
 
 // Функция инициализации UDP
