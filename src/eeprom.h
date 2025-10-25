@@ -63,7 +63,7 @@ private:
         db.init(kk::WIFI_SSID, "TP-Link_BC0C");
         db.init(kk::WIFI_PASS, "58133514");
         db.init(kk::externalScreen, false);
-        db.init(kk::wifiPower, 34);
+        db.init(kk::wifiPower, WIFI_POWER_8_5dBm);
 
     }
 };
