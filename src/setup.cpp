@@ -11,6 +11,17 @@ extern SettingsGyver sett;
 extern GyverDBFile db;
 extern Adafruit_SSD1306 display;
 
+static void drawStartupVersionFooter()
+{
+    int16_t cursorX = display.getCursorX();
+    int16_t cursorY = display.getCursorY();
+    display.fillRect(0, SCREEN_HEIGHT - 8, SCREEN_WIDTH, 8, SSD1306_BLACK);
+    display.setCursor(0, SCREEN_HEIGHT - 8);
+    display.print("v");
+    display.print(FW_VERSION);
+    display.setCursor(cursorX, cursorY);
+}
+
 // Функция инициализации пинов
 void initPins()
 {
@@ -98,11 +109,13 @@ void initWiFi()
     display.clearDisplay();
     display.print("Connecting ");
     display.println(WifiCurrentPowerString(db.get(kk::wifiPower)));
+    drawStartupVersionFooter();
     display.display();
 
     while (WiFi.status() != WL_CONNECTED)
     {
         display.print(".");
+        drawStartupVersionFooter();
         display.display();
         Serial.print(db.get(kk::wifiPower));
         Serial.print(".");
@@ -112,6 +125,7 @@ void initWiFi()
         {
             // Сеть не найдена
             display.println("\nSet Power to 8.5 dBm");
+            drawStartupVersionFooter();
             display.display();
             Serial.println("\nWifi STA не найдена");
             Serial.println("Снижаем мощность до 8.5dBm");
@@ -121,6 +135,7 @@ void initWiFi()
             while (WiFi.status() != WL_CONNECTED)
             {
                 display.print(".");
+                drawStartupVersionFooter();
                 display.display();
                 Serial.print(".");
                 delay(500);
@@ -142,6 +157,7 @@ void initWiFi()
     if (needAP)
     {
         display.println("\nStart APmode");
+        drawStartupVersionFooter();
         display.display();
         Serial.println("Запуск точки доступа");
         // запускаем точку доступа
@@ -155,6 +171,7 @@ void initWiFi()
     }
 
     display.println("\nConnected");
+    drawStartupVersionFooter();
     display.display();
 
     Serial.println();
@@ -190,6 +207,9 @@ void initUART()
     uart_param_config(UART_NUM_0, &config);
     uart_driver_install(UART_NUM_0, SERIAL2_SIZE_RX, 256, 100, &uartQueue, 0);
     uart_set_pin(UART_NUM_0, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+#if defined(HW_VARIANT_ESP32_S2_MINI)
+    gpio_set_pull_mode((gpio_num_t)UART_RX_PIN, GPIO_PULLDOWN_ONLY);
+#endif
     uart_flush_input(UART_NUM_0);
     xTaskCreate(uartTask, "uartTask", 10000, NULL, 1, NULL);
 

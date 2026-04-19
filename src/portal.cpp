@@ -111,7 +111,7 @@ void build(sets::Builder &b)
     }
 
     {
-        b.Label("Версия 1.5.5");
+        b.Label("Версия " FW_VERSION);
     }
 }
 
