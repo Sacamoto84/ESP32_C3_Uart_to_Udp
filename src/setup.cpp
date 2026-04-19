@@ -11,6 +11,12 @@ extern SettingsGyver sett;
 extern GyverDBFile db;
 extern Adafruit_SSD1306 display;
 
+void applyDisplayBrightness(uint8_t brightness)
+{
+    display.ssd1306_command(SSD1306_SETCONTRAST);
+    display.ssd1306_command(brightness);
+}
+
 static void drawStartupVersionFooter()
 {
     int16_t cursorX = display.getCursorX();
@@ -58,6 +64,8 @@ void initSerialAndFS()
 // Функция инициализации дисплея
 void initDisplay()
 {
+    EEPROM::getInstance();
+
 #if OLED_USE_I2C
     Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN);
     if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDR))
@@ -70,6 +78,7 @@ void initDisplay()
             ; // Don't proceed, loop forever
     }
 
+    applyDisplayBrightness((uint8_t)db.get(kk::screenBrightness));
     display.display();
 }
 

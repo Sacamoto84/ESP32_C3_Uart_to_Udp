@@ -22,7 +22,8 @@ DB_KEYS(
     WIFI_PASS,
     apply,
     externalScreen,
-    wifiPower
+    wifiPower,
+    screenBrightness
     );
 
 // ## Получаем единственный экземпляр
@@ -64,6 +65,7 @@ private:
         db.init(kk::WIFI_PASS, "58133514");
         db.init(kk::externalScreen, false);
         db.init(kk::wifiPower, WIFI_POWER_8_5dBm);
+        db.init(kk::screenBrightness, 207);
 
     }
 };

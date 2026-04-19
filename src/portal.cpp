@@ -73,6 +73,12 @@ void build(sets::Builder &b)
     EEPROM &eeprom = EEPROM::getInstance();
 
     Serial.println("build");
+    if (b.build.isAction() && b.build.id == kk::screenBrightness)
+    {
+        String rawBrightness = b.build.value;
+        Serial.print("[Brightness] action received, raw value: ");
+        Serial.println(rawBrightness);
+    }
 
     String tempIpClient = db.get(kk::ipClient);
     if (b.Input("Ip Адрес клиента", &tempIpClient))
@@ -91,6 +97,24 @@ void build(sets::Builder &b)
     b.Number(kk::Serial2Bitrate, "Битрейт", nullptr, 300, 4000000);
     b.Switch(kk::broadcast, "Броадкаст");
     b.Switch(kk::echo, "Эхо");
+    if (b.Slider(kk::screenBrightness, "Яркость экрана", 0, 255, 1))
+    {
+        int brightness = db.get(kk::screenBrightness);
+        bool changed = db.changed();
+        Serial.print("[Brightness] slider callback, db value: ");
+        Serial.println(brightness);
+        Serial.print("[Brightness] db.changed before save: ");
+        Serial.println(changed ? "true" : "false");
+
+        applyDisplayBrightness((uint8_t)brightness);
+
+        bool saved = db.update();
+        Serial.print("[Brightness] db.update result: ");
+        Serial.println(saved ? "true" : "false");
+        Serial.print("[Brightness] applied brightness: ");
+        Serial.println(brightness);
+        b.reload();
+    }
     
     {
         sets::Group g(b, "WiFi");
