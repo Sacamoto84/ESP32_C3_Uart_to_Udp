@@ -12,6 +12,12 @@ struct WifiPowerOption
     const char *label;
 };
 
+struct WifiPowerLabel
+{
+    int dbValue;
+    const char *label;
+};
+
 WifiPowerOption wifiPowerOptions[] = {
     {WIFI_POWER_MINUS_1dBm, -4, "-1dbm (-4)"},
     {WIFI_POWER_2dBm, 8, "2dBm (8)"},
@@ -23,15 +29,33 @@ WifiPowerOption wifiPowerOptions[] = {
     {WIFI_POWER_19dBm, 76, "19dBm (76)"},
     {WIFI_POWER_19_5dBm, 78, "19.5dBm (78)"}};
 
-void addWifiPowerButton(sets::Builder &b, const WifiPowerOption &opt, int currentPower)
+WifiPowerLabel wifiPowerLabels[] = {
+    {WIFI_POWER_MINUS_1dBm, "-1 dBm"},
+    {WIFI_POWER_2dBm, "2 dBm"},
+    {WIFI_POWER_5dBm, "5 dBm"},
+    {WIFI_POWER_7dBm, "7 dBm"},
+    {WIFI_POWER_8_5dBm, "8.5 dBm"},
+    {WIFI_POWER_11dBm, "11 dBm"},
+    {WIFI_POWER_13dBm, "13 dBm"},
+    {WIFI_POWER_15dBm, "15 dBm"},
+    {WIFI_POWER_17dBm, "17 dBm"},
+    {WIFI_POWER_18_5dBm, "18.5 dBm"},
+    {WIFI_POWER_19dBm, "19 dBm"},
+    {WIFI_POWER_19_5dBm, "19.5 dBm"},
+    {WIFI_POWER_20dBm, "20 dBm"},
+    {WIFI_POWER_20_5dBm, "20.5 dBm"},
+    {WIFI_POWER_21dBm, "21 dBm"}};
+
+void addWifiPowerButton(sets::Builder &b, size_t id, const WifiPowerOption &opt, int currentPower)
 {
     uint32_t color = (currentPower != opt.dbValue) ? 0x808080 : 0xd55f30;
-    sets::Buttons g(b);
-    if (b.Button(opt.label, color))
+    if (b.Button(id, opt.label, color))
     {
+        Serial.print("Set TX power to ");
         Serial.println(opt.label);
         db.set(kk::wifiPower, opt.dbValue);
         db.update();
+        WiFi.setTxPower((wifi_power_t)opt.dbValue);
         b.reload();
     }
 }
@@ -102,10 +126,10 @@ void build(sets::Builder &b)
         sets::Menu m(b, "Мощность Wifi");
         b.enterMenu();
         int currentPower = db.get(kk::wifiPower);
-        b.Label("Мощность", WifiCurrentPowerString(db.get(kk::wifiPower)));
-        for (int i = 0; i < sizeof(wifiPowerOptions) / sizeof(WifiPowerOption); ++i)
+        b.Label("Мощность", WifiCurrentPowerString(WiFi.getTxPower()));
+        for (size_t i = 0; i < sizeof(wifiPowerOptions) / sizeof(WifiPowerOption); ++i)
         {
-            addWifiPowerButton(b, wifiPowerOptions[i], currentPower);
+            addWifiPowerButton(b, 1000 + i, wifiPowerOptions[i], currentPower);
         }
 
     }
@@ -117,59 +141,16 @@ void build(sets::Builder &b)
 
 String WifiCurrentPowerString(int power)
 {
-    Serial.print("Current TX Power: ");
-    String res = "???";
-    switch (power)
+    Serial.print("Current TX Power code: ");
+    Serial.println(power);
+
+    for (int i = 0; i < sizeof(wifiPowerLabels) / sizeof(WifiPowerLabel); ++i)
     {
-    case WIFI_POWER_MINUS_1dBm:
-        Serial.println("-1 dBm");
-        res = "-1 dBm";
-        break;
-    case WIFI_POWER_2dBm:
-        Serial.println("2 dBm");
-        res = "2 dBm";
-        break;
-    case WIFI_POWER_8_5dBm:
-        Serial.println("8.5 dBm");
-        res = "8.5 dBm";
-        break;
-
-    case WIFI_POWER_11dBm:
-        Serial.println("11 dBm");
-        res = "11 dBm";
-        break;
-
-    case WIFI_POWER_13dBm:
-        Serial.println("13 dBm");
-        res = "13 dBm";
-        break;
-
-    case WIFI_POWER_15dBm:
-        Serial.println("15 dBm");
-        res = "15 dBm";
-        break;
-
-    case WIFI_POWER_17dBm:
-        Serial.println("17 dBm");
-        res = "17 dBm";
-        break;
-
-    case WIFI_POWER_19dBm:
-        Serial.println("19 dBm");
-        res = "19 dBm";
-        break;
-
-    case WIFI_POWER_19_5dBm:
-        Serial.println("19.5 dBm");
-        res = "19.5 dBm";
-        break;
-
-    default:
-        Serial.print("Unknown code: ");
-        Serial.println((int)power);
-        res = "Unknown code: ";
-        break;
+        if (wifiPowerLabels[i].dbValue == power)
+        {
+            return wifiPowerLabels[i].label;
+        }
     }
 
-    return res;
+    return String(power) + " raw";
 }

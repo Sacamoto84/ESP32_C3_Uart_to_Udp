@@ -108,7 +108,7 @@ void initWiFi()
     display.cp437(true);                 // Use full 256 char 'Code Page 437' font
     display.clearDisplay();
     display.print("Connecting ");
-    display.println(WifiCurrentPowerString(db.get(kk::wifiPower)));
+    display.println(WifiCurrentPowerString(WiFi.getTxPower()));
     drawStartupVersionFooter();
     display.display();
 
@@ -194,7 +194,7 @@ void initUART()
     // Теперь можно повысить мощность если нужно
     // WiFi.setTxPower(WIFI_POWER_19_5dBm);
 
-#define SERIAL2_SIZE_RX 1024 * 32
+#define SERIAL2_SIZE_RX 1024 * 64
 
     uart_config_t config = {
         .baud_rate = db.get(kk::Serial2Bitrate),
