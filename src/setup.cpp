@@ -26,11 +26,13 @@ static void drawStartupVersionFooter()
 void initPins()
 {
 #if defined(HW_VARIANT_ESP32_S2_MINI)
+    pinMode(BOOT_LOW_PIN, OUTPUT);
+    digitalWrite(BOOT_LOW_PIN, LOW);
+
     pinMode(BOOT_HIGH_PIN, OUTPUT);
     digitalWrite(BOOT_HIGH_PIN, HIGH);
 
-    pinMode(BOOT_LOW_PIN, OUTPUT);
-    digitalWrite(BOOT_LOW_PIN, LOW);
+    delay(200);
 #else
     pinMode(0, OUTPUT);
     pinMode(1, OUTPUT);
