@@ -14,6 +14,13 @@ extern Adafruit_SSD1306 display;
 // Функция инициализации пинов
 void initPins()
 {
+#if defined(HW_VARIANT_ESP32_S2_MINI)
+    pinMode(BOOT_HIGH_PIN, OUTPUT);
+    digitalWrite(BOOT_HIGH_PIN, HIGH);
+
+    pinMode(BOOT_LOW_PIN, OUTPUT);
+    digitalWrite(BOOT_LOW_PIN, LOW);
+#else
     pinMode(0, OUTPUT);
     pinMode(1, OUTPUT);
     pinMode(2, OUTPUT);
@@ -25,6 +32,7 @@ void initPins()
     pinMode(8, OUTPUT);
     pinMode(9, OPEN_DRAIN);
     pinMode(10, OUTPUT);
+#endif
 }
 
 // Функция инициализации Serial и LittleFS
@@ -37,7 +45,12 @@ void initSerialAndFS()
 // Функция инициализации дисплея
 void initDisplay()
 {
+#if OLED_USE_I2C
+    Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN);
+    if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDR))
+#else
     if (!display.begin(SSD1306_SWITCHCAPVCC))
+#endif
     {
         Serial.println(F("SSD1306 allocation failed"));
         for (;;)
@@ -134,7 +147,11 @@ void initWiFi()
         // запускаем точку доступа
         WiFi.mode(WIFI_AP);
         WiFi.softAP("AP ESP32");
-        digitalWrite(8, LOW);
+        if (AP_MODE_PIN >= 0)
+        {
+            pinMode(AP_MODE_PIN, OUTPUT);
+            digitalWrite(AP_MODE_PIN, LOW);
+        }
     }
 
     display.println("\nConnected");
@@ -172,11 +189,12 @@ void initUART()
 
     uart_param_config(UART_NUM_0, &config);
     uart_driver_install(UART_NUM_0, SERIAL2_SIZE_RX, 256, 100, &uartQueue, 0);
-    uart_set_pin(UART_NUM_0, 21, 20, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    uart_set_pin(UART_NUM_0, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
     uart_flush_input(UART_NUM_0);
     xTaskCreate(uartTask, "uartTask", 10000, NULL, 1, NULL);
 
-    sendUdpMessage("UART to UDP C3 V1.5.5\n", db.get(kk::ipClient).c_str());
+    String ipClient = db.get(kk::ipClient);
+    sendUdpMessage("UART to UDP " BOARD_LABEL " V" FW_VERSION "\n", ipClient.c_str());
 }
 
 // Функция инициализации UDP

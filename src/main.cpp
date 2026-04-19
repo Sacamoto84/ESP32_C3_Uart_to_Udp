@@ -10,8 +10,12 @@ QueueHandle_t uartQueue;
 SettingsGyver sett("My Settings", &db);
 GyverDBFile db(&LittleFS, "/data.db", 500);
 
+#if OLED_USE_I2C
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET_PIN);
+#else
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
-                         OLED_MOSI, OLED_CLK, OLED_DC, OLED_RESET, OLED_CS);
+                         OLED_MOSI_PIN, OLED_CLK_PIN, OLED_DC_PIN, OLED_RESET_PIN, OLED_CS_PIN);
+#endif
 
 
 void loop()

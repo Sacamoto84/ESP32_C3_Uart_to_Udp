@@ -23,12 +23,38 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
-// Declaration for SSD1306 display connected using software SPI (default case):
-#define OLED_MOSI 6
-#define OLED_CLK 4
-#define OLED_DC 3
-#define OLED_CS 1
-#define OLED_RESET 2
+#define FW_VERSION "1.5.5"
+
+#if defined(HW_VARIANT_ESP32_S2_MINI)
+#define BOARD_LABEL "ESP32-S2 Mini"
+#define OLED_USE_I2C 1
+#define OLED_SDA_PIN 18
+#define OLED_SCL_PIN 33
+#define OLED_I2C_ADDR 0x3C
+#define OLED_RESET_PIN -1
+#define UART_TX_PIN 5
+#define UART_RX_PIN 3
+#define BOOT_HIGH_PIN 35
+#define BOOT_LOW_PIN 37
+#define AP_MODE_PIN -1
+#define RESET_PULSE_PIN BOOT_LOW_PIN
+#elif defined(HW_VARIANT_ESP32_C3)
+#define BOARD_LABEL "ESP32-C3"
+#define OLED_USE_I2C 0
+#define OLED_MOSI_PIN 6
+#define OLED_CLK_PIN 4
+#define OLED_DC_PIN 3
+#define OLED_CS_PIN 1
+#define OLED_RESET_PIN 2
+#define UART_TX_PIN 21
+#define UART_RX_PIN 20
+#define BOOT_HIGH_PIN -1
+#define BOOT_LOW_PIN -1
+#define AP_MODE_PIN 8
+#define RESET_PULSE_PIN 9
+#else
+#error "Unsupported hardware variant. Add a build flag for the target board."
+#endif
 
 //MARK: Define
 #define AP_SSID "TP-Link_BC0C"

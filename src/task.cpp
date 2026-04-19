@@ -131,7 +131,8 @@ void uartTask(void *arg)
                         }
 
                         if (db.get(kk::broadcast) == false) {
-                            sendUdpMessageLen(&data[0], available, db.get(kk::ipClient).c_str());
+                            String ipClient = db.get(kk::ipClient);
+                            sendUdpMessageLen(&data[0], available, ipClient.c_str());
                         } else {
                             sendUdpBroadcast(&data[0], available);
                         }

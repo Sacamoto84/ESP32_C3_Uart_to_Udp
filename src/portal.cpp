@@ -84,11 +84,11 @@ void build(sets::Builder &b)
     if (b.Button("Выход -> Сброс", 0x25b18f))
     {
         Serial.println("✅ Выход -> Сброс");
-        pinMode(9, OUTPUT);
-        digitalWrite(9, LOW);
+        pinMode(RESET_PULSE_PIN, OUTPUT);
+        digitalWrite(RESET_PULSE_PIN, LOW);
         delay(100);
-        pinMode(9, OPEN_DRAIN);
-        digitalWrite(9, HIGH);
+        pinMode(RESET_PULSE_PIN, OPEN_DRAIN);
+        digitalWrite(RESET_PULSE_PIN, HIGH);
     }
 
     if (b.Button("Очистка базы", 0x25b18f))
