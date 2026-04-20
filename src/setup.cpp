@@ -2,6 +2,7 @@
 #include "hardware.h"
 #include "network_bridge.h"
 #include "settings_portal.h"
+#include "status_led.h"
 #include "uart_bridge.h"
 
 // Порядок важен:
@@ -10,6 +11,7 @@
 void setup()
 {
     initPins();
+    initStatusLed();
     initSerialAndFS();
     initDisplay();
     initWiFi();

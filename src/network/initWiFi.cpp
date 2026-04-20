@@ -1,4 +1,5 @@
 #include "network_internal.h"
+#include "status_led.h"
 
 // Функция инициализации WiFi.
 void initWiFi()
@@ -27,6 +28,7 @@ void initWiFi()
     int power = db.get(kk::wifiPower);
     WiFi.setTxPower((wifi_power_t)power);
     WiFi.begin(db.get(kk::WIFI_SSID), db.get(kk::WIFI_PASS));
+    sendStatusLedCommand(StatusLedCommand::ConnectingToStation);
 
 #if PROJECT_HAS_SCREEN
     display.setTextSize(1);
@@ -106,12 +108,21 @@ void initWiFi()
         Serial.println("Запуск точки доступа");
         WiFi.mode(WIFI_AP);
         WiFi.softAP("AP ESP32");
+        sendStatusLedCommand(StatusLedCommand::AccessPoint);
 
-        if (AP_MODE_PIN >= 0)
+        if (AP_MODE_PIN >= 0
+#if PROJECT_HAS_BOARD_LED
+            && AP_MODE_PIN != STATUS_LED_BOARD_PIN
+#endif
+        )
         {
             pinMode(AP_MODE_PIN, OUTPUT);
             digitalWrite(AP_MODE_PIN, LOW);
         }
+    }
+    else
+    {
+        sendStatusLedCommand(StatusLedCommand::StationConnected);
     }
 
 #if PROJECT_HAS_SCREEN
@@ -122,5 +133,5 @@ void initWiFi()
 
     Serial.println();
     Serial.print("Connected: ");
-    Serial.println(WiFi.localIP());
+    Serial.println(needAP ? WiFi.softAPIP() : WiFi.localIP());
 }

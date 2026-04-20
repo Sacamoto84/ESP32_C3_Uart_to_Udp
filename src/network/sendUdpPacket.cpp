@@ -1,4 +1,5 @@
 #include "network_internal.h"
+#include "status_led.h"
 
 // Общая функция отправки UDP-пакета.
 // Нужна, чтобы не дублировать создание сокета и обработку ошибок
@@ -32,6 +33,7 @@ bool sendUdpPacket(const char *tag, const char *payload, int len, const sockaddr
     }
 
     Serial.printf("%s: sent %d bytes\n", tag, sent);
+    sendStatusLedCommand(StatusLedCommand::PulseNetworkActivity);
     close(sock);
     return true;
 }

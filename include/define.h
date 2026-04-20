@@ -16,6 +16,18 @@
 #define PROJECT_HAS_SCREEN 1
 #endif
 
+// Для использования встроенного светодиода платы добавьте флаг:
+// -DPROJECT_USE_BOARD_LED=1
+#if defined(PROJECT_USE_BOARD_LED)
+#define PROJECT_HAS_BOARD_LED 1
+#else
+#define PROJECT_HAS_BOARD_LED 0
+#endif
+
+// Для переопределения полярности светодиода добавьте:
+// -DPROJECT_BOARD_LED_ACTIVE_LOW=1  -> LED светит при уровне LOW
+// -DPROJECT_BOARD_LED_ACTIVE_LOW=0  -> LED светит при уровне HIGH
+
 #if PROJECT_HAS_SCREEN
 #include <SPI.h>
 #include <Wire.h>
@@ -36,7 +48,7 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
-#define FW_VERSION "1.5.9"
+#define FW_VERSION "1.6.0"
 
 // Параметры платы и назначение пинов зависят от выбранного environment в PlatformIO.
 #if defined(HW_VARIANT_ESP32_S2_MINI)
@@ -52,6 +64,8 @@
 #define BOOT_LOW_PIN 37
 #define AP_MODE_PIN -1
 #define RESET_PULSE_PIN BOOT_LOW_PIN
+#define STATUS_LED_BOARD_PIN 15
+#define STATUS_LED_ACTIVE_LOW_DEFAULT 1
 #elif defined(HW_VARIANT_ESP32_C3)
 #define BOARD_LABEL "ESP32-C3"
 #define OLED_USE_I2C 0
@@ -66,8 +80,16 @@
 #define BOOT_LOW_PIN -1
 #define AP_MODE_PIN 8
 #define RESET_PULSE_PIN 9
+#define STATUS_LED_BOARD_PIN 8
+#define STATUS_LED_ACTIVE_LOW_DEFAULT 1
 #else
 #error "Unsupported hardware variant. Add a build flag for the target board."
+#endif
+
+#if defined(PROJECT_BOARD_LED_ACTIVE_LOW)
+#define STATUS_LED_ACTIVE_LOW PROJECT_BOARD_LED_ACTIVE_LOW
+#else
+#define STATUS_LED_ACTIVE_LOW STATUS_LED_ACTIVE_LOW_DEFAULT
 #endif
 
 // Значения по умолчанию для Wi-Fi.
