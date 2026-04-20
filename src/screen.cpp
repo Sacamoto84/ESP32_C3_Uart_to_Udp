@@ -50,6 +50,4 @@ void screenLoop()
     display.println(rssi);
 
     display.display();
-
-    delay(1000);
 }

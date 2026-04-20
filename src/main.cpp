@@ -5,10 +5,11 @@
 
 WiFiUDP udp; // Объект для работы с UDP
 
-byte buffer[1024]; // Буфер для входящих данных
+byte buffer[1024]; // Буфер для входящих данных для экрана
 QueueHandle_t uartQueue;
-SettingsGyver sett("My Settings", &db);
+
 GyverDBFile db(&LittleFS, "/data.db", 500);
+SettingsGyver sett("My Settings", &db);
 
 #if OLED_USE_I2C
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET_PIN);
@@ -17,19 +18,19 @@ Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
                          OLED_MOSI_PIN, OLED_CLK_PIN, OLED_DC_PIN, OLED_RESET_PIN, OLED_CS_PIN);
 #endif
 
-
 void loop()
 {
     EEPROM &eeprom = EEPROM::getInstance();
 
-    static GTimer<millis> tmr(5000, true);
+    static GTimer<millis> tmr(2000, true);
 
     sett.tick();
     db.tick();
 
-    if (tmr)
+    if (tmr && (db.get(kk::externalScreen) == 0))
     {
-        Serial.println(WiFi.localIP());
+        // Serial.println(WiFi.localIP());
+        screenLoop();
     }
 
     if (db.get(kk::externalScreen))
@@ -42,10 +43,13 @@ void loop()
             if (packetSize == 1024) // Ожидаем ровно 1024 байта
             {
                 int bytesRead = udp.read(display.getBuffer(), 1024);
-                if (bytesRead == 1024) {
+                if (bytesRead == 1024)
+                {
                     display.display(); // Получено 1024 байт, обновляем дисплей
                     Serial.println("Display updated with 1024 bytes");
-                } else {
+                }
+                else
+                {
                     Serial.printf("Error: read only %d bytes, expected 1024\n", bytesRead);
                 }
             }
@@ -62,11 +66,6 @@ void loop()
                 Serial.printf("Discarded %d bytes from invalid packet\n", discarded);
             }
         }
-    }else
-    {
-        screenLoop();
     }
+    
 }
-
-
-

@@ -5,7 +5,7 @@
 
 extern String WifiCurrentPowerString(int);
 extern WiFiUDP udp;       // Объект для работы с UDP
-extern byte buffer[1024]; // Буфер для входящих данных
+extern byte buffer[1024]; // Буфер для входящих данных для экрана
 extern QueueHandle_t uartQueue;
 extern SettingsGyver sett;
 extern GyverDBFile db;

@@ -97,6 +97,7 @@ void build(sets::Builder &b)
     b.Number(kk::Serial2Bitrate, "Битрейт", nullptr, 300, 4000000);
     b.Switch(kk::broadcast, "Броадкаст");
     b.Switch(kk::echo, "Эхо");
+
     if (b.Slider(kk::screenBrightness, "Яркость экрана", 0, 255, 1))
     {
         int brightness = db.get(kk::screenBrightness);
@@ -114,6 +115,7 @@ void build(sets::Builder &b)
         Serial.print("[Brightness] applied brightness: ");
         Serial.println(brightness);
         b.reload();
+        sett.reload(true);
     }
     
     {
