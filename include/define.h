@@ -3,13 +3,25 @@
 
 #include <Arduino.h>
 #include <ArduinoOTA.h>
+#include <WiFi.h>
+#include <WiFiUdp.h>
 
 #include <SettingsGyver.h>
 
+// Для безэкранной сборки добавьте флаг:
+// -DPROJECT_NO_SCREEN=1
+#if defined(PROJECT_NO_SCREEN)
+#define PROJECT_HAS_SCREEN 0
+#else
+#define PROJECT_HAS_SCREEN 1
+#endif
+
+#if PROJECT_HAS_SCREEN
 #include <SPI.h>
 #include <Wire.h>
 #include <Adafruit_GFX.h>
 #include <Adafruit_SSD1306.h>
+#endif
 #include "mString.h"
 #include <GyverDBFile.h>
 #include "eeprom.h"
@@ -24,8 +36,9 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
-#define FW_VERSION "1.5.8"
+#define FW_VERSION "1.5.9"
 
+// Параметры платы и назначение пинов зависят от выбранного environment в PlatformIO.
 #if defined(HW_VARIANT_ESP32_S2_MINI)
 #define BOARD_LABEL "ESP32-S2 Mini"
 #define OLED_USE_I2C 1
@@ -57,28 +70,8 @@
 #error "Unsupported hardware variant. Add a build flag for the target board."
 #endif
 
-//MARK: Define
+// Значения по умолчанию для Wi-Fi.
 #define AP_SSID "TP-Link_BC0C"
 #define AP_PASS "58133514"
-
-extern QueueHandle_t uartQueue;
-extern GyverDBFile db;
-extern void uartTask(void* arg);
-extern void sendUdpMessage(const char* msg, const char* ip);
-extern void build(sets::Builder &b);
-extern void applyDisplayBrightness(uint8_t brightness);
-
-// Функции инициализации из setup.cpp
-extern void initPins();
-extern void initSerialAndFS();
-extern void initDisplay();
-extern void initWiFi();
-extern void initSettings();
-extern void initUART();
-extern void initUDP();
-extern void setup();
-
-// Функция экрана
-extern void screenLoop();
 
 #endif

@@ -1,15 +1,16 @@
 #ifndef _eeprom_h
 #define _eeprom_h
 
+#include <WiFi.h>
 #include <GyverDBFile.h>
 #include <LittleFS.h>
 
 extern GyverDBFile db;
 
-// база данных для хранения настроек
-// будет автоматически записываться в файл при изменениях
+// База данных для хранения настроек.
+// GyverDBFile сам сохраняет изменения в файл при update().
 
-// имена ячеек базы данных
+// Имена ячеек базы данных.
 DB_KEYS(
     kk,
     ipClient,
@@ -23,19 +24,17 @@ DB_KEYS(
     apply,
     externalScreen,
     wifiPower,
-    screenBrightness
-    );
+    screenBrightness);
 
-// ## Получаем единственный экземпляр
+// Получаем единственный экземпляр:
 // EEPROM& settings = EEPROM::getInstance();
 class EEPROM
 {
 public:
-
     int all_TX_to_UDP;
     int all_RX_from_UDP;
 
-    // Единственный способ получить экземпляр
+    // Единственный способ получить экземпляр.
     static EEPROM &getInstance()
     {
         static EEPROM instance;
@@ -43,19 +42,19 @@ public:
     }
 
 private:
-    // Запрет копирования
+    // Запрет копирования.
     EEPROM(const EEPROM &) = delete;
     EEPROM &operator=(const EEPROM &) = delete;
 
-    // Приватный конструктор - нельзя создать извне
+    // Приватный конструктор: экземпляр нельзя создать извне.
     EEPROM()
     {
-        // Инициализация по умолчанию, аналог init блока в Kotlin
-        // запуск и инициализация полей БД
+        // Инициализация по умолчанию, аналог init-блока в Kotlin:
+        // запускаем БД и создаём все поля, если их ещё нет.
         db.begin();
-    
-        // создаёт ячейку соответствующего типа и записывает "начальные" данные,
-        // если такой ячейки ещё нет в БД
+
+        // Создаёт ячейку соответствующего типа и записывает начальные данные,
+        // если такой ячейки ещё нет в БД.
         db.init(kk::ipClient, "192.168.0.100");
         db.init(kk::echo, true);
         db.init(kk::broadcast, false);
@@ -66,7 +65,6 @@ private:
         db.init(kk::externalScreen, false);
         db.init(kk::wifiPower, WIFI_POWER_8_5dBm);
         db.init(kk::screenBrightness, 207);
-
     }
 };
 

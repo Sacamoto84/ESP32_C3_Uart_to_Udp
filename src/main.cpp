@@ -1,71 +1,36 @@
-#include "define.h"
+#include "app_globals.h"
+
+#include "display.h"
+#include "network_bridge.h"
+
 #include <GTimer.h>
-#include <SPI.h>
-#include <lwip/inet.h>
 
-WiFiUDP udp; // Объект для работы с UDP
-
-byte buffer[1024]; // Буфер для входящих данных для экрана
-QueueHandle_t uartQueue;
-
-GyverDBFile db(&LittleFS, "/data.db", 500);
-SettingsGyver sett("My Settings", &db);
-
-#if OLED_USE_I2C
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET_PIN);
-#else
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
-                         OLED_MOSI_PIN, OLED_CLK_PIN, OLED_DC_PIN, OLED_RESET_PIN, OLED_CS_PIN);
-#endif
-
+// Основной цикл максимально короткий:
+// крутим SettingsGyver, обслуживаем БД и обновляем нужный режим экрана.
 void loop()
 {
-    EEPROM &eeprom = EEPROM::getInstance();
-
-    static GTimer<millis> tmr(2000, true);
-
     sett.tick();
     db.tick();
 
-    if (tmr && (db.get(kk::externalScreen) == 0))
+#if PROJECT_HAS_SCREEN
+    // Локальный экран состояния обновляем не каждый цикл,
+    // а раз в 2 секунды, чтобы не тратить время впустую.
+    static GTimer<millis> statusScreenTimer(2000, true);
+
+    bool externalScreenEnabled = db.get(kk::externalScreen);
+    if (externalScreenEnabled)
     {
-        // Serial.println(WiFi.localIP());
-        screenLoop();
+        // Когда включён внешний экран, локальный OLED работает как framebuffer,
+        // который целиком обновляется из входящих UDP-пакетов.
+        handleExternalScreenUdp();
+        return;
     }
 
-    if (db.get(kk::externalScreen))
+    if (statusScreenTimer)
     {
-        // Обработка входящих UDP-пакетов
-        int packetSize = udp.parsePacket();
-        if (packetSize)
-        {
-            Serial.printf("UDP packet received: size %d from %s\n", packetSize, udp.remoteIP().toString().c_str());
-            if (packetSize == 1024) // Ожидаем ровно 1024 байта
-            {
-                int bytesRead = udp.read(display.getBuffer(), 1024);
-                if (bytesRead == 1024)
-                {
-                    display.display(); // Получено 1024 байт, обновляем дисплей
-                    Serial.println("Display updated with 1024 bytes");
-                }
-                else
-                {
-                    Serial.printf("Error: read only %d bytes, expected 1024\n", bytesRead);
-                }
-            }
-            else
-            {
-                Serial.printf("Error: packet size %d bytes, expected 1024\n", packetSize);
-                //  Очистка буфера, если пакет некорректного размера
-                int discarded = 0;
-                while (udp.available())
-                {
-                    udp.read();
-                    discarded++;
-                }
-                Serial.printf("Discarded %d bytes from invalid packet\n", discarded);
-            }
-        }
+        // Иначе показываем обычный экран состояния устройства.
+        screenLoop();
     }
-    
+#endif
+
 }
