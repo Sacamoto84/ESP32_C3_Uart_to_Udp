@@ -21,8 +21,7 @@ void initDisplay()
 
 #if !PROJECT_HAS_SCREEN
     return;
-#endif
-
+#else
 #if OLED_USE_I2C
     Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN);
     if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDR))
@@ -37,6 +36,7 @@ void initDisplay()
 
     applyDisplayBrightness((uint8_t)db.get(kk::screenBrightness));
     display.display();
+#endif
 }
 
 // Локальный экран состояния, который показывается,

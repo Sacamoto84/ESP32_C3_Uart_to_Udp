@@ -8,17 +8,18 @@ namespace
 #if PROJECT_HAS_BOARD_LED
 constexpr uint32_t kConnectingBlinkMs = 350;
 constexpr uint32_t kAccessPointBlinkMs = 120;
-constexpr uint32_t kNetworkPulseMs = 60;
+constexpr uint32_t kNetworkPulseMs = 50; //60
 constexpr uint8_t kStatusLedTaskCore = 0;
 constexpr UBaseType_t kStatusLedTaskPriority = tskIDLE_PRIORITY;
 constexpr uint16_t kStatusLedTaskStack = 2048;
 constexpr uint8_t kStatusLedQueueLength = 8;
+constexpr uint32_t kStatusLedPwmFreq = 5000;
+constexpr uint8_t kStatusLedPwmResolution = 8;
+constexpr uint32_t kStatusLedPwmMaxDuty = (1UL << kStatusLedPwmResolution) - 1;
 
 QueueHandle_t statusLedQueue = nullptr;
 TaskHandle_t statusLedTaskHandle = nullptr;
-
-constexpr uint8_t kLedOnLevel = STATUS_LED_ACTIVE_LOW ? LOW : HIGH;
-constexpr uint8_t kLedOffLevel = STATUS_LED_ACTIVE_LOW ? HIGH : LOW;
+bool statusLedPwmReady = false;
 
 struct StatusLedState
 {
@@ -27,9 +28,31 @@ struct StatusLedState
     uint32_t activityPulseUntil = 0;
 };
 
+uint32_t statusLedOnDuty()
+{
+    return (STATUS_LED_BRIGHTNESS > kStatusLedPwmMaxDuty) ? kStatusLedPwmMaxDuty : STATUS_LED_BRIGHTNESS;
+}
+
+uint32_t statusLedRawDuty(bool enabled)
+{
+    uint32_t onDuty = statusLedOnDuty();
+
+    if (STATUS_LED_ACTIVE_LOW)
+    {
+        return enabled ? (kStatusLedPwmMaxDuty - onDuty) : kStatusLedPwmMaxDuty;
+    }
+
+    return enabled ? onDuty : 0;
+}
+
 void writeStatusLed(bool enabled)
 {
-    digitalWrite(STATUS_LED_BOARD_PIN, enabled ? kLedOnLevel : kLedOffLevel);
+    if (!statusLedPwmReady)
+    {
+        return;
+    }
+
+    ledcWrite(STATUS_LED_BOARD_PIN, statusLedRawDuty(enabled));
 }
 
 uint32_t currentBlinkPeriod(StatusLedCommand mode)
@@ -176,12 +199,20 @@ void initStatusLed()
         return;
     }
 
-    pinMode(STATUS_LED_BOARD_PIN, OUTPUT);
+    if (!ledcAttach(STATUS_LED_BOARD_PIN, kStatusLedPwmFreq, kStatusLedPwmResolution))
+    {
+        Serial.println("Status LED PWM attach failed");
+        return;
+    }
+
+    statusLedPwmReady = true;
     writeStatusLed(false);
 
     statusLedQueue = xQueueCreate(kStatusLedQueueLength, sizeof(StatusLedCommand));
     if (!statusLedQueue)
     {
+        ledcDetach(STATUS_LED_BOARD_PIN);
+        statusLedPwmReady = false;
         return;
     }
 

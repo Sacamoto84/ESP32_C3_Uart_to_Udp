@@ -27,6 +27,8 @@
 // Для переопределения полярности светодиода добавьте:
 // -DPROJECT_BOARD_LED_ACTIVE_LOW=1  -> LED светит при уровне LOW
 // -DPROJECT_BOARD_LED_ACTIVE_LOW=0  -> LED светит при уровне HIGH
+// Для задания яркости статусного светодиода добавьте:
+// -DPROJECT_BOARD_LED_BRIGHTNESS=32 -> яркость PWM в диапазоне 0..255
 
 #if PROJECT_HAS_SCREEN
 #include <SPI.h>
@@ -90,6 +92,12 @@
 #define STATUS_LED_ACTIVE_LOW PROJECT_BOARD_LED_ACTIVE_LOW
 #else
 #define STATUS_LED_ACTIVE_LOW STATUS_LED_ACTIVE_LOW_DEFAULT
+#endif
+
+#if defined(PROJECT_BOARD_LED_BRIGHTNESS)
+#define STATUS_LED_BRIGHTNESS PROJECT_BOARD_LED_BRIGHTNESS
+#else
+#define STATUS_LED_BRIGHTNESS 255
 #endif
 
 // Значения по умолчанию для Wi-Fi.
