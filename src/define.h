@@ -24,7 +24,7 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
-#define FW_VERSION "1.5.7"
+#define FW_VERSION "1.5.8"
 
 #if defined(HW_VARIANT_ESP32_S2_MINI)
 #define BOARD_LABEL "ESP32-S2 Mini"

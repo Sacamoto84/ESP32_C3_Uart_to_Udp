@@ -98,21 +98,19 @@ void build(sets::Builder &b)
     b.Switch(kk::broadcast, "Броадкаст");
     b.Switch(kk::echo, "Эхо");
 
-    if (b.Slider(kk::screenBrightness, "Яркость экрана", 0, 255, 1))
+    if (b.Number(kk::screenBrightness, "Яркость экрана", nullptr, 0, 255))
     {
-        int brightness = db.get(kk::screenBrightness);
-        bool changed = db.changed();
-        Serial.print("[Brightness] slider callback, db value: ");
+        int brightness = constrain((int)db.get(kk::screenBrightness), 0, 255);
+
+        Serial.print("[Brightness] number callback, value: ");
         Serial.println(brightness);
-        Serial.print("[Brightness] db.changed before save: ");
-        Serial.println(changed ? "true" : "false");
 
         applyDisplayBrightness((uint8_t)brightness);
 
         bool saved = db.update();
         Serial.print("[Brightness] db.update result: ");
         Serial.println(saved ? "true" : "false");
-        Serial.print("[Brightness] applied brightness: ");
+        Serial.print("[Brightness] applied value: ");
         Serial.println(brightness);
         b.reload();
         sett.reload(true);
