@@ -23,6 +23,7 @@ DB_KEYS(
     WIFI_PASS,
     apply,
     externalScreen,
+    useTcpTransport,
     useStaticIp,
     staticIp,
     staticGateway,
@@ -67,6 +68,7 @@ private:
         db.init(kk::WIFI_SSID, "TP-Link_BC0C");
         db.init(kk::WIFI_PASS, "58133514");
         db.init(kk::externalScreen, false);
+        db.init(kk::useTcpTransport, false);
         db.init(kk::useStaticIp, false);
         db.init(kk::staticIp, "192.168.0.222");
         db.init(kk::staticGateway, "192.168.0.1");

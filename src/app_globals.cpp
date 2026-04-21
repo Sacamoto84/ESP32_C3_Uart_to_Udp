@@ -3,6 +3,7 @@
 // Общие объекты вынесены в отдельный translation unit,
 // чтобы не размазывать определения по main.cpp и setup.cpp.
 WiFiUDP udp;
+WiFiClient tcpClient;
 QueueHandle_t uartQueue;
 
 // База настроек и веб-портал живут всё время работы прошивки.

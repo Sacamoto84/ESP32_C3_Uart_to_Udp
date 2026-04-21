@@ -14,3 +14,5 @@ void handleExternalScreenUdp();
 void sendUdpMessage(const char *msg, const char *ip);
 void sendUdpMessageLen(const char *msg, int len, const char *ip);
 void sendUdpBroadcast(const char *msg, int len);
+void sendTcpMessage(const char *msg, const char *ip);
+void sendTcpMessageLen(const char *msg, int len, const char *ip);

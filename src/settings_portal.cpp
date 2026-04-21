@@ -113,7 +113,21 @@ void build(sets::Builder &b)
     }
 
     b.Number(kk::Serial2Bitrate, "Битрейт", nullptr, 300, 4000000);
-    b.Switch(kk::broadcast, "Броадкаст");
+    if (b.Switch(kk::useTcpTransport, "Использовать TCP transport"))
+    {
+        sett.reload(true);
+    }
+
+    if (db.get(kk::useTcpTransport))
+    {
+        b.Label("TCP: один получатель, порядок и ретраи дает стек TCP");
+        b.Label("Broadcast доступен только в UDP режиме");
+    }
+    else
+    {
+        b.Switch(kk::broadcast, "Броадкаст");
+    }
+
     b.Switch(kk::echo, "Эхо");
 
 #if PROJECT_HAS_SCREEN

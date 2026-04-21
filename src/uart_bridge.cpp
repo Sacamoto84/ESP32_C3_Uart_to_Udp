@@ -8,7 +8,7 @@ namespace
 // Размер буфера драйвера UART.
 constexpr int kUartRxBufferSize = 1024 * 64;
 
-// Таймер нужен, чтобы паковать мелкие UART-чанки в более крупные UDP-пакеты.
+// Таймер нужен, чтобы паковать мелкие UART-чанки в более крупные сетевые пакеты.
 unsigned long lastUartBatchAt = 0;
 
 // Рабочий буфер под принятые данные из UART.
@@ -39,10 +39,17 @@ void initUART()
     xTaskCreate(uartTask, "uartTask", 10000, nullptr, 1, nullptr);
 
     String ipClient = db.get(kk::ipClient);
-    sendUdpMessage("UART to UDP " BOARD_LABEL " V" FW_VERSION "\n", ipClient.c_str());
+    if (db.get(kk::useTcpTransport))
+    {
+        sendTcpMessage("UART to TCP " BOARD_LABEL " V" FW_VERSION "\n", ipClient.c_str());
+    }
+    else
+    {
+        sendUdpMessage("UART to UDP " BOARD_LABEL " V" FW_VERSION "\n", ipClient.c_str());
+    }
 }
 
-// Фоновая задача чтения UART и пересылки данных по UDP.
+// Фоновая задача чтения UART и пересылки данных по сети.
 void uartTask(void *arg)
 {
     (void)arg;
@@ -83,7 +90,7 @@ void uartTask(void *arg)
         Serial.printf("UART received %d bytes\n", available);
 
         // Если пришёл совсем маленький кусок, даём ему шанс "донакопиться"
-        // ещё до 50 мс, чтобы не плодить короткие UDP-пакеты.
+        // ещё до 50 мс, чтобы не плодить короткие сетевые пакеты.
         if ((available <= 1023) && (millis() - lastUartBatchAt <= 50))
         {
             continue;
@@ -98,7 +105,7 @@ void uartTask(void *arg)
 
         lastUartBatchAt = millis();
         eeprom.all_TX_to_UDP += available;
-        Serial.printf("TX to UDP: %d байт, общее TX: %d\n", available, eeprom.all_TX_to_UDP);
+        Serial.printf("TX to network: %d bytes, total TX: %d\n", available, eeprom.all_TX_to_UDP);
 
         if (db.get(kk::echo))
         {
@@ -108,7 +115,8 @@ void uartTask(void *arg)
             Serial.println(uartDataBuffer);
         }
 
-        if (db.get(kk::broadcast))
+        bool useTcpTransport = db.get(kk::useTcpTransport);
+        if (!useTcpTransport && db.get(kk::broadcast))
         {
             // В режиме broadcast шлём пакет во всю сеть.
             sendUdpBroadcast(uartDataBuffer, available);
@@ -117,6 +125,13 @@ void uartTask(void *arg)
 
         // Обычный режим - отправка на конкретный IP клиента.
         String ipClient = db.get(kk::ipClient);
-        sendUdpMessageLen(uartDataBuffer, available, ipClient.c_str());
+        if (useTcpTransport)
+        {
+            sendTcpMessageLen(uartDataBuffer, available, ipClient.c_str());
+        }
+        else
+        {
+            sendUdpMessageLen(uartDataBuffer, available, ipClient.c_str());
+        }
     }
 }
