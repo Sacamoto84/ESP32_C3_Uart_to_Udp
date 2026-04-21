@@ -23,6 +23,10 @@ DB_KEYS(
     WIFI_PASS,
     apply,
     externalScreen,
+    useStaticIp,
+    staticIp,
+    staticGateway,
+    staticSubnet,
     wifiPower,
     screenBrightness);
 
@@ -63,6 +67,10 @@ private:
         db.init(kk::WIFI_SSID, "TP-Link_BC0C");
         db.init(kk::WIFI_PASS, "58133514");
         db.init(kk::externalScreen, false);
+        db.init(kk::useStaticIp, false);
+        db.init(kk::staticIp, "192.168.0.222");
+        db.init(kk::staticGateway, "192.168.0.1");
+        db.init(kk::staticSubnet, "255.255.255.0");
         db.init(kk::wifiPower, WIFI_POWER_8_5dBm);
         db.init(kk::screenBrightness, 207);
     }

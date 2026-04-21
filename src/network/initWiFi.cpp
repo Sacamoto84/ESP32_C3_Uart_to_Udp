@@ -1,6 +1,27 @@
 #include "network_internal.h"
 #include "status_led.h"
 
+namespace
+{
+bool loadStaticIpConfig(IPAddress &localIp, IPAddress &gateway, IPAddress &subnet)
+{
+    String localIpString = db.get(kk::staticIp);
+    String gatewayString = db.get(kk::staticGateway);
+    String subnetString = db.get(kk::staticSubnet);
+
+    bool ok = localIp.fromString(localIpString) &&
+              gateway.fromString(gatewayString) &&
+              subnet.fromString(subnetString);
+
+    if (!ok)
+    {
+        Serial.println("Static IP enabled, but one of the IP fields is invalid. Falling back to DHCP");
+    }
+
+    return ok;
+}
+} // namespace
+
 // Функция инициализации WiFi.
 void initWiFi()
 {
@@ -11,6 +32,30 @@ void initWiFi()
     setCpuFrequencyMhz(80); // вместо 160 MHz
 
     WiFi.mode(WIFI_STA);
+
+    if (db.get(kk::useStaticIp))
+    {
+        IPAddress localIp;
+        IPAddress gateway;
+        IPAddress subnet;
+
+        if (loadStaticIpConfig(localIp, gateway, subnet))
+        {
+            if (WiFi.config(localIp, gateway, subnet))
+            {
+                Serial.print("Static IP enabled: ");
+                Serial.print(localIp);
+                Serial.print(" gateway ");
+                Serial.print(gateway);
+                Serial.print(" subnet ");
+                Serial.println(subnet);
+            }
+            else
+            {
+                Serial.println("WiFi.config failed, falling back to DHCP");
+            }
+        }
+    }
 
     // От слабого к сильному сигналу:
     // WIFI_POWER_MINUS_1dBm    // ~2 dBm   (~80 мА пик)

@@ -50,23 +50,23 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
-#define FW_VERSION "1.6.0"
+#define FW_VERSION "1.6.2"
 
 // Параметры платы и назначение пинов зависят от выбранного environment в PlatformIO.
 #if defined(HW_VARIANT_ESP32_S2_MINI)
 #define BOARD_LABEL "ESP32-S2 Mini"
 #define OLED_USE_I2C 1
-#define OLED_SDA_PIN 18
-#define OLED_SCL_PIN 33
+#define OLED_SDA_PIN 21
+#define OLED_SCL_PIN 34
 #define OLED_I2C_ADDR 0x3C
 #define OLED_RESET_PIN -1
 #define UART_TX_PIN 5
 #define UART_RX_PIN 3
-#define BOOT_HIGH_PIN 35
-#define BOOT_LOW_PIN 37
+#define BOOT_HIGH_PIN 36                 // VCC для OLED
+#define BOOT_LOW_PIN 38                  // GND для OLED
 #define AP_MODE_PIN -1
-#define RESET_PULSE_PIN BOOT_LOW_PIN
-#define STATUS_LED_BOARD_PIN 15
+#define RESET_PULSE_PIN 9                // Пин для сброса открытый коллектор
+#define STATUS_LED_BOARD_PIN 15          // Светодиод на плате
 #define STATUS_LED_ACTIVE_LOW_DEFAULT 1
 #elif defined(HW_VARIANT_ESP32_C3)
 #define BOARD_LABEL "ESP32-C3"

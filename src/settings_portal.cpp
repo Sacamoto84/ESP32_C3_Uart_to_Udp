@@ -49,6 +49,31 @@ bool isValidIp(const char *ip)
     struct in_addr addr;
     return inet_aton(ip, &addr);
 }
+
+// Унифицированное сохранение IPv4-настроек в БД.
+// Если адрес некорректный, просто не применяем его и оставляем старое значение.
+template <typename TKey>
+void handleIpInput(sets::Builder &b, TKey key, const char *label)
+{
+    String tempValue = db.get(key);
+    if (!b.Input(label, &tempValue))
+    {
+        return;
+    }
+
+    const char *ip = b.build.value.c_str();
+    if (!isValidIp(ip))
+    {
+        Serial.printf("Invalid IP for %s: %s\n", label, ip);
+        sett.reload(true);
+        return;
+    }
+
+    Serial.printf("Saved %s: %s\n", label, ip);
+    db.set(key, ip);
+    db.update();
+    sett.reload(true);
+}
 } // namespace
 
 void initSettings()
@@ -118,6 +143,20 @@ void build(sets::Builder &b)
         sets::Group g(b, "WiFi");
         b.Input(kk::WIFI_SSID, "SSID");
         b.Input(kk::WIFI_PASS, "Password");
+        if (b.Switch(kk::useStaticIp, "Использовать static IP"))
+        {
+            sett.reload(true);
+        }
+
+        if (db.get(kk::useStaticIp))
+        {
+            // Для реальной статической конфигурации недостаточно одного IP,
+            // поэтому даём настроить адрес устройства, шлюз и маску сети.
+            handleIpInput(b, kk::staticIp, "Static IP");
+            handleIpInput(b, kk::staticGateway, "Gateway");
+            handleIpInput(b, kk::staticSubnet, "Subnet mask");
+            b.Label("Static IP применяется после перезагрузки ESP32");
+        }
     }
 
 #if PROJECT_HAS_SCREEN
