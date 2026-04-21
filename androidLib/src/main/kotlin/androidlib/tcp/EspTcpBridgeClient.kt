@@ -1,7 +1,6 @@
 package androidlib.tcp
 
 import io.ktor.network.selector.SelectorManager
-import io.ktor.network.sockets.ServerSocket
 import io.ktor.network.sockets.Socket
 import io.ktor.network.sockets.aSocket
 import io.ktor.utils.io.ByteWriteChannel
@@ -16,6 +15,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -28,30 +28,28 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
- * Android-side TCP server for the ESP32 bridge.
+ * Android-side TCP client for the ESP32 bridge.
  *
- * ESP32 in this firmware connects as a TCP client, so Android should listen on
- * the configured port and accept exactly one active device connection.
+ * ESP32 in the current firmware listens as a TCP server on port 8888, and the
+ * Android app connects to it as a single TCP client.
  */
-class EspTcpBridgeServer(
+class EspTcpBridgeClient(
     scope: CoroutineScope,
-    private val config: EspTcpBridgeServerConfig = EspTcpBridgeServerConfig(),
+    private val config: EspTcpBridgeClientConfig,
 ) {
-    private val serverScope = CoroutineScope(scope.coroutineContext + SupervisorJob() + Dispatchers.IO)
+    private val clientScope = CoroutineScope(scope.coroutineContext + SupervisorJob() + Dispatchers.IO)
     private val writerMutex = Mutex()
     private val started = AtomicBoolean(false)
 
     private var selectorManager: SelectorManager? = null
-    private var serverSocket: ServerSocket? = null
     private var clientSocket: Socket? = null
     private var outputChannel: ByteWriteChannel? = null
-    private var serverJob: Job? = null
+    private var clientJob: Job? = null
 
     private val _state = MutableStateFlow<EspTcpBridgeState>(EspTcpBridgeState.Stopped)
     val state: StateFlow<EspTcpBridgeState> = _state.asStateFlow()
 
-    // Raw byte chunks received from TCP. Ordering is preserved, but chunk
-    // boundaries should not be treated as message boundaries.
+    // TCP keeps byte order, but not message boundaries.
     private val incomingChannel = Channel<ByteArray>(capacity = Channel.BUFFERED)
     val incomingChunks: Flow<ByteArray> = incomingChannel.receiveAsFlow()
 
@@ -60,21 +58,18 @@ class EspTcpBridgeServer(
             return
         }
 
-        serverJob = serverScope.launch {
-            runServerLoop()
+        clientJob = clientScope.launch {
+            runClientLoop()
         }
     }
 
     suspend fun stop() {
         started.set(false)
 
-        // Closing sockets first helps unblock accept()/readAvailable() so the
-        // coroutine can finish cleanly without hanging on shutdown.
-        closeServer()
         closeClient()
 
-        serverJob?.cancelAndJoin()
-        serverJob = null
+        clientJob?.cancelAndJoin()
+        clientJob = null
 
         selectorManager?.close()
         selectorManager = null
@@ -84,7 +79,7 @@ class EspTcpBridgeServer(
 
     suspend fun send(bytes: ByteArray) {
         writerMutex.withLock {
-            val channel = outputChannel ?: error("No ESP32 client connected")
+            val channel = outputChannel ?: error("No ESP32 connection")
             channel.writeFully(bytes)
         }
     }
@@ -93,35 +88,36 @@ class EspTcpBridgeServer(
         send(text.toByteArray(Charsets.UTF_8))
     }
 
-    private suspend fun runServerLoop() {
+    private suspend fun runClientLoop() {
         selectorManager = SelectorManager(Dispatchers.IO)
         val manager = selectorManager ?: return
 
         try {
-            serverSocket = aSocket(manager).tcp().bind(config.bindHost, config.port)
-            _state.value = EspTcpBridgeState.Listening(config.bindHost, config.port)
-
             while (started.get() && currentCoroutineContext().isActive) {
-                val socket = serverSocket?.accept() ?: break
-                handleClient(socket)
+                _state.value = EspTcpBridgeState.Connecting(config.host, config.port)
+
+                try {
+                    val socket = aSocket(manager).tcp().connect(config.host, config.port)
+                    handleConnectedSocket(socket)
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (t: Throwable) {
+                    if (started.get()) {
+                        _state.value = EspTcpBridgeState.Error(t)
+                    }
+                }
 
                 if (started.get() && currentCoroutineContext().isActive) {
-                    _state.value = EspTcpBridgeState.Listening(config.bindHost, config.port)
+                    _state.value = EspTcpBridgeState.Disconnected
+                    delay(config.reconnectDelayMs)
                 }
-            }
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (t: Throwable) {
-            if (started.get()) {
-                _state.value = EspTcpBridgeState.Error(t)
             }
         } finally {
             closeClient()
-            closeServer()
         }
     }
 
-    private suspend fun handleClient(socket: Socket) {
+    private suspend fun handleConnectedSocket(socket: Socket) {
         val remoteAddress = remoteAddressOf(socket)
         val input = socket.openReadChannel()
         val output = socket.openWriteChannel(autoFlush = true)
@@ -131,7 +127,7 @@ class EspTcpBridgeServer(
             clientSocket = socket
             outputChannel = output
         }
-        _state.value = EspTcpBridgeState.ClientConnected(remoteAddress)
+        _state.value = EspTcpBridgeState.Connected(remoteAddress)
 
         try {
             while (started.get() && currentCoroutineContext().isActive) {
@@ -154,9 +150,6 @@ class EspTcpBridgeServer(
             }
         } finally {
             closeClient()
-            if (started.get()) {
-                _state.value = EspTcpBridgeState.ClientDisconnected(remoteAddress)
-            }
         }
     }
 
@@ -166,13 +159,6 @@ class EspTcpBridgeServer(
             runCatching { clientSocket?.close() }
             outputChannel = null
             clientSocket = null
-        }
-    }
-
-    private suspend fun closeServer() {
-        withContext(Dispatchers.IO) {
-            runCatching { serverSocket?.close() }
-            serverSocket = null
         }
     }
 

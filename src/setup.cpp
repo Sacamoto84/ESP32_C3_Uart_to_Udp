@@ -16,6 +16,7 @@ void setup()
     initDisplay();
     initWiFi();
     initSettings();
+    initTcpServer();
     initUART();
     initUDP();
 }

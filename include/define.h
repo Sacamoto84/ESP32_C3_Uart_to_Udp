@@ -50,7 +50,7 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
-#define FW_VERSION "1.6.2"
+#define FW_VERSION "1.6.3"
 
 // Параметры платы и назначение пинов зависят от выбранного environment в PlatformIO.
 #if defined(HW_VARIANT_ESP32_S2_MINI)
@@ -98,6 +98,18 @@
 #define STATUS_LED_BRIGHTNESS PROJECT_BOARD_LED_BRIGHTNESS
 #else
 #define STATUS_LED_BRIGHTNESS 255
+#endif
+
+#if defined(PROJECT_NETWORK_TX_CHUNK_SIZE)
+#define NETWORK_TX_CHUNK_SIZE PROJECT_NETWORK_TX_CHUNK_SIZE
+#else
+#define NETWORK_TX_CHUNK_SIZE 1024
+#endif
+
+#if defined(PROJECT_NETWORK_TX_QUEUE_LENGTH)
+#define NETWORK_TX_QUEUE_LENGTH PROJECT_NETWORK_TX_QUEUE_LENGTH
+#else
+#define NETWORK_TX_QUEUE_LENGTH 32
 #endif
 
 // Значения по умолчанию для Wi-Fi.

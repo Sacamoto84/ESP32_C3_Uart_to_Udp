@@ -5,20 +5,19 @@
 
 namespace
 {
-// Размер буфера драйвера UART.
+// Буфер драйвера UART.
+// Он нужен, чтобы короткие всплески входящего потока не терялись сразу на IRQ-уровне.
 constexpr int kUartRxBufferSize = 1024 * 64;
 
-// Таймер нужен, чтобы паковать мелкие UART-чанки в более крупные сетевые пакеты.
-unsigned long lastUartBatchAt = 0;
-
-// Рабочий буфер под принятые данные из UART.
-char uartDataBuffer[32768];
+// Локальный буфер чтения из драйвера UART.
+// Дальше данные уже дробятся на сетевые чанки фиксированного размера.
+char uartDataBuffer[NETWORK_TX_CHUNK_SIZE * 4];
 } // namespace
 
-// Функция инициализации UART.
+// Инициализация UART.
 void initUART()
 {
-    // Теперь можно повысить мощность, если нужно:
+    // При необходимости мощность Wi-Fi можно поднять отдельно:
     // WiFi.setTxPower(WIFI_POWER_19_5dBm);
     uart_config_t config = {
         .baud_rate = db.get(kk::Serial2Bitrate),
@@ -38,18 +37,13 @@ void initUART()
     uart_flush_input(UART_NUM_0);
     xTaskCreate(uartTask, "uartTask", 10000, nullptr, 1, nullptr);
 
-    String ipClient = db.get(kk::ipClient);
-    if (db.get(kk::useTcpTransport))
-    {
-        sendTcpMessage("UART to TCP " BOARD_LABEL " V" FW_VERSION "\n", ipClient.c_str());
-    }
-    else
-    {
-        sendUdpMessage("UART to UDP " BOARD_LABEL " V" FW_VERSION "\n", ipClient.c_str());
-    }
+    const char *banner = "UART to TCP server " BOARD_LABEL " V" FW_VERSION "\n";
+    enqueueNetworkTxData((const uint8_t *)banner, strlen(banner));
 }
 
-// Фоновая задача чтения UART и пересылки данных по сети.
+// Фоновая задача чтения UART и постановки данных в ограниченную сетевую очередь.
+// Такой разрыв между UART и TCP нужен, чтобы медленная сеть не блокировала чтение UART
+// и не приводила к крашу или разрастанию буферов.
 void uartTask(void *arg)
 {
     (void)arg;
@@ -64,74 +58,61 @@ void uartTask(void *arg)
             continue;
         }
 
+        if (event.type == UART_FIFO_OVF || event.type == UART_BUFFER_FULL)
+        {
+            Serial.println("UART overflow event, flushing driver input buffer");
+            uart_flush_input(UART_NUM_0);
+            xQueueReset(uartQueue);
+            continue;
+        }
+
         if (event.type != UART_DATA)
         {
             continue;
         }
 
-        // Ограничиваем чтение размером локального буфера
-        // и оставляем место под завершающий ноль для отладочного вывода.
-        size_t maxRead = (event.size < sizeof(uartDataBuffer) - 1) ? event.size : sizeof(uartDataBuffer) - 1;
+        // Читаем не больше локального буфера и оставляем байт под завершающий ноль,
+        // чтобы echo-лог не выходил за границы.
+        const size_t maxRead = (event.size < sizeof(uartDataBuffer) - 1) ? event.size : sizeof(uartDataBuffer) - 1;
         int available = uart_read_bytes(UART_NUM_0, uartDataBuffer, maxRead, 0);
 
-        if (available == -1)
+        if (available <= 0)
         {
-            Serial.println("UART ошибка чтения: available == -1");
+            Serial.printf("UART read skipped, available=%d\n", available);
             continue;
         }
 
         if (available >= (int)sizeof(uartDataBuffer))
         {
-            Serial.printf("UART предотвращение переполнения буфера: available %d >= %d\n", available, sizeof(uartDataBuffer));
+            Serial.printf("UART local buffer clamp: %d -> %u\n", available, (unsigned)(sizeof(uartDataBuffer) - 1));
             available = sizeof(uartDataBuffer) - 1;
         }
 
         uartDataBuffer[available] = '\0';
-        Serial.printf("UART received %d bytes\n", available);
-
-        // Если пришёл совсем маленький кусок, даём ему шанс "донакопиться"
-        // ещё до 50 мс, чтобы не плодить короткие сетевые пакеты.
-        if ((available <= 1023) && (millis() - lastUartBatchAt <= 50))
-        {
-            continue;
-        }
-
-        Serial.printf("UART processing: available %d, time diff %lu ms\n", available, millis() - lastUartBatchAt);
-        if (uartDataBuffer[0] == 0)
-        {
-            Serial.println("UART data[0] == 0, skipping");
-            continue;
-        }
-
-        lastUartBatchAt = millis();
-        eeprom.all_TX_to_UDP += available;
-        Serial.printf("TX to network: %d bytes, total TX: %d\n", available, eeprom.all_TX_to_UDP);
 
         if (db.get(kk::echo))
         {
-            // Отладочный вывод полезен, когда надо понять,
-            // что именно уходит из UART в сеть.
-            Serial.println("UDP_tx echo:");
+            // Echo оставлен как и раньше, чтобы можно было глазами посмотреть,
+            // что уходит из UART в транспортный слой.
+            Serial.println("NET_tx echo:");
             Serial.println(uartDataBuffer);
         }
 
-        bool useTcpTransport = db.get(kk::useTcpTransport);
-        if (!useTcpTransport && db.get(kk::broadcast))
-        {
-            // В режиме broadcast шлём пакет во всю сеть.
-            sendUdpBroadcast(uartDataBuffer, available);
-            continue;
-        }
+        const size_t queued = enqueueNetworkTxData((const uint8_t *)uartDataBuffer, (size_t)available);
+        eeprom.all_TX_to_network += (int)queued;
 
-        // Обычный режим - отправка на конкретный IP клиента.
-        String ipClient = db.get(kk::ipClient);
-        if (useTcpTransport)
+        if (queued < (size_t)available)
         {
-            sendTcpMessageLen(uartDataBuffer, available, ipClient.c_str());
+            Serial.printf("UART -> network queue overflow: queued %u of %u bytes, dropped total %u\n",
+                          (unsigned)queued,
+                          (unsigned)available,
+                          (unsigned)getDroppedNetworkTxBytes());
         }
         else
         {
-            sendUdpMessageLen(uartDataBuffer, available, ipClient.c_str());
+            Serial.printf("TX to network queue: %u bytes, total TX: %d\n",
+                          (unsigned)queued,
+                          eeprom.all_TX_to_network);
         }
     }
 }

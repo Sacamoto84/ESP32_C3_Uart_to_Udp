@@ -2,16 +2,16 @@
 
 This folder contains a small Android-side TCP helper for the ESP32 bridge.
 
-The current ESP32 firmware in TCP mode acts as a **TCP client** and connects to
-the Android device at `ipClient:8888`.
+The current ESP32 firmware listens as a **TCP server** on port `8888`.
 
-That means the Android app should act as a **TCP server**.
+That means the Android app should act as a **TCP client** and connect to the
+ESP32 IP address.
 
 ## What is inside
 
-- `EspTcpBridgeServerConfig.kt` - server config
+- `EspTcpBridgeClientConfig.kt` - client config
 - `EspTcpBridgeState.kt` - connection state model
-- `EspTcpBridgeServer.kt` - Ktor-based TCP server for Android
+- `EspTcpBridgeClient.kt` - Ktor-based TCP client for Android
 
 ## Dependencies
 
@@ -66,30 +66,31 @@ F
 
 So you should treat `incomingChunks` as a **byte stream**, not as packets.
 
-The helper accepts one active ESP32 connection at a time and exposes received
-bytes as `Flow<ByteArray>`.
+The helper keeps reconnecting while started. If the ESP32 is temporarily
+unavailable, Android will try to reconnect after `reconnectDelayMs`.
 
 ## Example usage
 
 ```kotlin
 class BridgeViewModel : ViewModel() {
 
-    private val tcpServer = EspTcpBridgeServer(
+    private val tcpClient = EspTcpBridgeClient(
         scope = viewModelScope,
-        config = EspTcpBridgeServerConfig(
-            bindHost = "0.0.0.0",
+        config = EspTcpBridgeClientConfig(
+            host = "192.168.4.1",
             port = 8888,
             readBufferSize = 8192,
+            reconnectDelayMs = 1000,
         )
     )
 
-    val state = tcpServer.state
+    val state = tcpClient.state
 
     init {
-        tcpServer.start()
+        tcpClient.start()
 
         viewModelScope.launch {
-            tcpServer.incomingChunks.collect { chunk ->
+            tcpClient.incomingChunks.collect { chunk ->
                 // Feed your UART protocol parser here.
                 // Order is preserved by TCP.
                 handleBytes(chunk)
@@ -103,7 +104,7 @@ class BridgeViewModel : ViewModel() {
 
     override fun onCleared() {
         viewModelScope.launch {
-            tcpServer.stop()
+            tcpClient.stop()
         }
         super.onCleared()
     }
@@ -112,11 +113,11 @@ class BridgeViewModel : ViewModel() {
 
 ## How to use with ESP32
 
-1. Start this TCP server in the Android app.
-2. Find the Android device IP on the local Wi-Fi network.
-3. Put that IP into the ESP32 settings portal as `ipClient`.
-4. Enable `TCP transport` in the ESP32 settings portal.
-5. Keep port `8888` on the Android side.
+1. Connect Android to the same Wi-Fi network as ESP32, or connect to the ESP32 access point.
+2. Find the ESP32 IP address in the serial log, on the OLED, or in the settings portal.
+3. Start `EspTcpBridgeClient` with `host = "<ESP32 IP>"` and `port = 8888`.
+4. Keep `broadcast` disabled if you want normal TCP transport.
+5. If `broadcast` is enabled in the ESP32 portal, data will go over UDP broadcast instead of TCP.
 
 ## Optional send back to ESP32
 

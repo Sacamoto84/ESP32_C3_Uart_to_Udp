@@ -11,6 +11,8 @@ extern GyverDBFile db;
 // GyverDBFile сам сохраняет изменения в файл при update().
 
 // Имена ячеек базы данных.
+// ipClient и useTcpTransport оставлены как legacy-ключи,
+// чтобы старые базы настроек спокойно открывались после обновления прошивки.
 DB_KEYS(
     kk,
     ipClient,
@@ -36,8 +38,8 @@ DB_KEYS(
 class EEPROM
 {
 public:
-    int all_TX_to_UDP;
-    int all_RX_from_UDP;
+    int all_TX_to_network = 0;
+    int all_RX_from_network = 0;
 
     // Единственный способ получить экземпляр.
     static EEPROM &getInstance()

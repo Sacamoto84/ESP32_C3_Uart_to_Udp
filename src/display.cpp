@@ -1,6 +1,7 @@
 #include "display.h"
 
 #include "app_globals.h"
+#include "network_bridge.h"
 
 // Яркость SSD1306 задаётся напрямую через регистр contrast.
 void applyDisplayBrightness(uint8_t brightness)
@@ -16,7 +17,7 @@ void applyDisplayBrightness(uint8_t brightness)
 void initDisplay()
 {
     // Инициализируем singleton с настройками заранее,
-    // чтобы можно было сразу применить сохранённую яркость экрана.
+    // чтобы сразу применить сохранённую яркость экрана.
     EEPROM::getInstance();
 
 #if !PROJECT_HAS_SCREEN
@@ -39,8 +40,8 @@ void initDisplay()
 #endif
 }
 
-// Локальный экран состояния, который показывается,
-// когда внешний экран по UDP отключен.
+// Локальный экран состояния показывается,
+// когда внешний экран по UDP отключён.
 void screenLoop()
 {
 #if !PROJECT_HAS_SCREEN
@@ -48,9 +49,11 @@ void screenLoop()
 #else
     EEPROM &eeprom = EEPROM::getInstance();
 
-    // Получение уровня сигнала WiFi (RSSI).
-    long rssi = WiFi.RSSI();
-    IPAddress ip = WiFi.localIP();
+    // В STA показываем локальный IP, в AP - адрес точки доступа.
+    const long rssi = WiFi.RSSI();
+    const wifi_mode_t wifiMode = WiFi.getMode();
+    const bool apMode = (wifiMode == WIFI_MODE_AP || wifiMode == WIFI_MODE_APSTA);
+    const IPAddress ip = apMode ? WiFi.softAPIP() : WiFi.localIP();
 
     display.clearDisplay();
     display.setTextSize(1);
@@ -60,26 +63,34 @@ void screenLoop()
     display.println(ip);
 
     display.setCursor(0, 11);
-    display.print("Client: ");
-    display.print(db.get(kk::ipClient));
+    if (db.get(kk::broadcast))
+    {
+        display.print("Mode: UDP bcast");
+    }
+    else
+    {
+        display.print("TCP: ");
+        display.print(isTcpClientConnected() ? "client on" : "wait client");
+    }
 
     display.setCursor(0, 20);
     display.print("Bitrate: ");
     display.print(db.get(kk::Serial2Bitrate));
 
     display.setCursor(0, 29);
-    display.print(db.get(kk::broadcast) ? "Broadcast: True" : "Broadcast: False");
+    display.print(db.get(kk::echo) ? "Echo: True" : "Echo: False");
 
     display.setCursor(0, 38);
-    display.print(db.get(kk::echo) ? "Echo:      True" : "Echo:      False");
+    display.print("Drop: ");
+    display.print(getDroppedNetworkTxBytes());
 
     display.setTextSize(2);
     display.setCursor(0, 48);
     display.print("TX:");
-    display.print(eeprom.all_TX_to_UDP);
+    display.print(eeprom.all_TX_to_network);
 
     display.setTextSize(1);
-    display.setCursor(110, 0);
+    display.setCursor(104, 0);
     display.println(rssi);
 
     display.display();

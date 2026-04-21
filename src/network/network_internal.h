@@ -7,13 +7,24 @@
 #include "lwip/sockets.h"
 #include <lwip/inet.h>
 
-// Внутренние helper-функции сетевого модуля.
-// Они нужны нескольким .cpp в папке network, но наружу их не экспортируем.
+// Общие сетевые константы проекта.
 constexpr uint16_t kNetworkDataPort = 8888;
+constexpr uint32_t kTcpWriteTimeoutMs = 3000;
 
+// Один элемент очереди между UART и сетью.
+// Размер ограничен compile-time define, чтобы не было неограниченного роста памяти.
+struct NetworkTxChunk
+{
+    uint16_t len;
+    bool useBroadcast;
+    uint8_t data[NETWORK_TX_CHUNK_SIZE];
+};
+
+// Внутренние helper-функции сетевого модуля.
 bool sendUdpPacket(const char *tag, const char *payload, int len, const sockaddr_in &dest, bool enableBroadcast);
-bool ensureTcpConnection(const char *ip, uint16_t port);
-bool sendTcpPacket(const char *tag, const uint8_t *payload, size_t len, const char *ip, uint16_t port);
+void networkTxTask(void *arg);
+void pollTcpServer();
+bool sendTcpChunk(const uint8_t *payload, size_t len);
 
 #if PROJECT_HAS_SCREEN
 void drawStartupVersionFooter();

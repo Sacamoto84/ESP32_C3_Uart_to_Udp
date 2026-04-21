@@ -5,14 +5,20 @@
 // Служебное преобразование кода мощности Wi-Fi в строку для UI/дисплея.
 String WifiCurrentPowerString(int power);
 
-// Сетевой стек проекта: Wi-Fi, UDP и внешний экран по UDP.
+// Базовая сеть проекта: Wi-Fi, TCP server для Android и UDP для внешнего экрана.
 void initWiFi();
 void initUDP();
+void initTcpServer();
 void handleExternalScreenUdp();
 
-// Отправка UART-данных в UDP.
-void sendUdpMessage(const char *msg, const char *ip);
-void sendUdpMessageLen(const char *msg, int len, const char *ip);
-void sendUdpBroadcast(const char *msg, int len);
-void sendTcpMessage(const char *msg, const char *ip);
-void sendTcpMessageLen(const char *msg, int len, const char *ip);
+// Помещаем UART-данные в ограниченную очередь.
+// В обычном режиме они уйдут в TCP server, в broadcast-режиме - по UDP broadcast.
+size_t enqueueNetworkTxData(const uint8_t *data, size_t len);
+
+// UDP оставляем только для широковещательных пакетов.
+bool sendUdpBroadcast(const char *msg, int len);
+
+// Getter'ы для UI, локального экрана и отладки.
+bool isTcpClientConnected();
+uint32_t getDroppedNetworkTxBytes();
+uint32_t getQueuedNetworkTxChunks();

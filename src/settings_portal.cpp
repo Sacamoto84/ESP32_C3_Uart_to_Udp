@@ -4,12 +4,12 @@
 #include "display.h"
 #include "network_bridge.h"
 
-#include <lwip/inet.h>
 #include <esp_wifi.h>
+#include <lwip/inet.h>
 
 namespace
 {
-// Набор кнопок для выбора фиксированной мощности передатчика Wi-Fi.
+// Набор кнопок выбора фиксированной мощности Wi-Fi.
 struct WifiPowerOption
 {
     int dbValue;
@@ -28,10 +28,10 @@ constexpr WifiPowerOption kWifiPowerOptions[] = {
     {78, "19.5dBm (78)"},
 };
 
-// Кнопка активной мощности подсвечивается, остальные серые.
+// Подсвечиваем только активную мощность, чтобы в меню было легко ориентироваться.
 void addWifiPowerButton(sets::Builder &b, size_t id, const WifiPowerOption &option, int currentPower)
 {
-    uint32_t color = (currentPower != option.dbValue) ? 0x808080 : 0xd55f30;
+    const uint32_t color = (currentPower != option.dbValue) ? 0x808080 : 0xd55f30;
     if (b.Button(id, option.label, color))
     {
         Serial.print("Set TX power to ");
@@ -43,15 +43,14 @@ void addWifiPowerButton(sets::Builder &b, size_t id, const WifiPowerOption &opti
     }
 }
 
-// Простая валидация IPv4-адреса перед сохранением в БД.
+// Простая проверка IPv4 перед сохранением в БД.
 bool isValidIp(const char *ip)
 {
     struct in_addr addr;
     return inet_aton(ip, &addr);
 }
 
-// Унифицированное сохранение IPv4-настроек в БД.
-// Если адрес некорректный, просто не применяем его и оставляем старое значение.
+// Унифицированная обработка IP-полей для static IP режима.
 template <typename TKey>
 void handleIpInput(sets::Builder &b, TKey key, const char *label)
 {
@@ -74,20 +73,29 @@ void handleIpInput(sets::Builder &b, TKey key, const char *label)
     db.update();
     sett.reload(true);
 }
+
+// В STA показываем обычный IP, в AP - адрес точки доступа.
+IPAddress currentPortalIp()
+{
+    const wifi_mode_t wifiMode = WiFi.getMode();
+    const bool apMode = (wifiMode == WIFI_MODE_AP || wifiMode == WIFI_MODE_APSTA);
+    return apMode ? WiFi.softAPIP() : WiFi.localIP();
+}
 } // namespace
 
 void initSettings()
 {
-    // Запускаем SettingsGyver и привязываем callback,
-    // который строит всю страницу настроек.
+    // Инициализируем веб-портал настроек и привязываем callback,
+    // который полностью строит интерфейс страницы.
     sett.begin();
     sett.onBuild(build);
 }
 
-// Здесь описан весь веб-интерфейс портала настроек.
+// Здесь описан весь UI настроек проекта.
 void build(sets::Builder &b)
 {
     Serial.println("build");
+
 #if PROJECT_HAS_SCREEN
     if (b.build.isAction() && b.build.id == kk::screenBrightness)
     {
@@ -97,42 +105,38 @@ void build(sets::Builder &b)
     }
 #endif
 
-    // Для Input нужен изменяемый буфер, поэтому берём временную строку.
-    String tempIpClient = db.get(kk::ipClient);
-    if (b.Input("Ip Адрес клиента", &tempIpClient))
-    {
-        Serial.println(b.build.value);
-        const char *ip = b.build.value.c_str();
-        if (isValidIp(ip))
-        {
-            Serial.printf("Correct IP: %s\n", ip);
-            db.set(kk::ipClient, ip);
-            db.update();
-            sett.reload(true);
-        }
-    }
-
     b.Number(kk::Serial2Bitrate, "Битрейт", nullptr, 300, 4000000);
-    if (b.Switch(kk::useTcpTransport, "Использовать TCP transport"))
+
+    if (b.Switch(kk::broadcast, "Броадкаст"))
     {
         sett.reload(true);
     }
 
-    if (db.get(kk::useTcpTransport))
+    const String currentIpLabel = "ESP32 IP: " + currentPortalIp().toString();
+    b.Label(currentIpLabel.c_str());
+
+    if (db.get(kk::broadcast))
     {
-        b.Label("TCP: один получатель, порядок и ретраи дает стек TCP");
-        b.Label("Broadcast доступен только в UDP режиме");
+        b.Label("Режим транспорта: UDP broadcast");
+        b.Label("Отправка идет на 255.255.255.255:8888");
     }
     else
     {
-        b.Switch(kk::broadcast, "Броадкаст");
+        b.Label("Режим транспорта: TCP server");
+        b.Label("Android подключается к этому ESP32 как TCP client");
+        b.Label("Порт TCP сервера: 8888");
+
+        String queueLabel = "Очередь UART->TCP: " + String(NETWORK_TX_QUEUE_LENGTH) +
+                            " x " + String(NETWORK_TX_CHUNK_SIZE) + " байт";
+        b.Label(queueLabel.c_str());
+        b.Label("При переполнении новые данные дропаются без краша прошивки");
     }
 
     b.Switch(kk::echo, "Эхо");
 
 #if PROJECT_HAS_SCREEN
     // Яркость задаётся напрямую в диапазоне 0..255,
-    // чтобы без преобразований писать её в контроллер дисплея.
+    // чтобы без преобразований писать значение в контроллер дисплея.
     if (b.Number(kk::screenBrightness, "Яркость экрана", nullptr, 0, 255))
     {
         int brightness = constrain((int)db.get(kk::screenBrightness), 0, 255);
@@ -153,10 +157,11 @@ void build(sets::Builder &b)
 #endif
 
     {
-        // Группа Wi-Fi-настроек.
+        // Блок Wi-Fi настроек: SSID/пароль и опциональный static IP.
         sets::Group g(b, "WiFi");
         b.Input(kk::WIFI_SSID, "SSID");
         b.Input(kk::WIFI_PASS, "Password");
+
         if (b.Switch(kk::useStaticIp, "Использовать static IP"))
         {
             sett.reload(true);
@@ -164,8 +169,8 @@ void build(sets::Builder &b)
 
         if (db.get(kk::useStaticIp))
         {
-            // Для реальной статической конфигурации недостаточно одного IP,
-            // поэтому даём настроить адрес устройства, шлюз и маску сети.
+            // Для static IP нужен не только адрес ESP32,
+            // но и gateway плюс маска сети.
             handleIpInput(b, kk::staticIp, "Static IP");
             handleIpInput(b, kk::staticGateway, "Gateway");
             handleIpInput(b, kk::staticSubnet, "Subnet mask");
@@ -193,7 +198,7 @@ void build(sets::Builder &b)
         digitalWrite(RESET_PULSE_PIN, HIGH);
     }
 
-    // Полная очистка БД с настройками.
+    // Полная очистка БД настроек.
     if (b.Button("Очистка базы", 0x25b18f))
     {
         Serial.println("Очистка базы");
@@ -202,10 +207,10 @@ void build(sets::Builder &b)
     }
 
     {
-        // Отдельное меню выбора мощности Wi-Fi.
+        // Отдельное меню выбора мощности Wi-Fi передатчика.
         sets::Menu m(b, "Мощность Wifi");
         b.enterMenu();
-        int currentPower = db.get(kk::wifiPower);
+        const int currentPower = db.get(kk::wifiPower);
         b.Label("Мощность", WifiCurrentPowerString(WiFi.getTxPower()));
         for (size_t i = 0; i < sizeof(kWifiPowerOptions) / sizeof(WifiPowerOption); ++i)
         {

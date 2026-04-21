@@ -1,9 +1,8 @@
 #include "network_internal.h"
 #include "status_led.h"
 
-// Общая функция отправки UDP-пакета.
-// Нужна, чтобы не дублировать создание сокета и обработку ошибок
-// в sendUdpMessageLen() и sendUdpBroadcast().
+// Общая helper-функция отправки UDP-пакета.
+// В текущей архитектуре используется только для broadcast и внешнего экрана.
 bool sendUdpPacket(const char *tag, const char *payload, int len, const sockaddr_in &dest, bool enableBroadcast)
 {
     int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
@@ -32,7 +31,6 @@ bool sendUdpPacket(const char *tag, const char *payload, int len, const sockaddr
         return false;
     }
 
-    Serial.printf("%s: sent %d bytes\n", tag, sent);
     sendStatusLedCommand(StatusLedCommand::PulseNetworkActivity);
     close(sock);
     return true;

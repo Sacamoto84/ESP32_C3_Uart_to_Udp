@@ -3,8 +3,12 @@
 // Общие объекты вынесены в отдельный translation unit,
 // чтобы не размазывать определения по main.cpp и setup.cpp.
 WiFiUDP udp;
+WiFiServer tcpServer(8888);
 WiFiClient tcpClient;
 QueueHandle_t uartQueue;
+QueueHandle_t networkTxQueue;
+volatile bool tcpClientConnected = false;
+volatile uint32_t droppedNetworkTxBytes = 0;
 
 // База настроек и веб-портал живут всё время работы прошивки.
 GyverDBFile db(&LittleFS, "/data.db", 500);
