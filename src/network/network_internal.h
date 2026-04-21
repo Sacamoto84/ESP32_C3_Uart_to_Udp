@@ -24,6 +24,8 @@ struct NetworkTxChunk
 bool sendUdpPacket(const char *tag, const char *payload, int len, const sockaddr_in &dest, bool enableBroadcast);
 void networkTxTask(void *arg);
 void pollTcpServer();
+void disconnectTcpClient(const char *reason);
+bool refreshTcpClientConnectionState(const char *disconnectReason);
 bool sendTcpChunk(const uint8_t *payload, size_t len);
 
 #if PROJECT_HAS_SCREEN

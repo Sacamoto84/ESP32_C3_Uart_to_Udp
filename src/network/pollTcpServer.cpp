@@ -2,12 +2,7 @@
 
 void pollTcpServer()
 {
-    if (tcpClient && !tcpClient.connected())
-    {
-        Serial.println("pollTcpServer: TCP client disconnected");
-        tcpClient.stop();
-        tcpClientConnected = false;
-    }
+    refreshTcpClientConnectionState("pollTcpServer: TCP client disconnected");
 
     if (!tcpServer.hasClient())
     {
@@ -20,7 +15,7 @@ void pollTcpServer()
         return;
     }
 
-    if (tcpClient && tcpClient.connected())
+    if (refreshTcpClientConnectionState("pollTcpServer: TCP client disconnected"))
     {
         Serial.printf("pollTcpServer: rejecting extra client %s:%u\n",
                       newClient.remoteIP().toString().c_str(),

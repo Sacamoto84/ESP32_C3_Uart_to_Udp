@@ -8,9 +8,8 @@ bool sendTcpChunk(const uint8_t *payload, size_t len)
         return true;
     }
 
-    if (!(tcpClient && tcpClient.connected()))
+    if (!refreshTcpClientConnectionState("sendTcpChunk: TCP client disconnected before write"))
     {
-        tcpClientConnected = false;
         return false;
     }
 
@@ -27,19 +26,15 @@ bool sendTcpChunk(const uint8_t *payload, size_t len)
             continue;
         }
 
-        if (!(tcpClient && tcpClient.connected()))
+        if (!refreshTcpClientConnectionState("sendTcpChunk: TCP client disconnected during write"))
         {
-            Serial.println("sendTcpChunk: TCP client disconnected during write");
-            tcpClient.stop();
-            tcpClientConnected = false;
             return false;
         }
 
         if (millis() - lastProgressAt > kTcpWriteTimeoutMs)
         {
             Serial.printf("sendTcpChunk: write timeout after %u ms\n", kTcpWriteTimeoutMs);
-            tcpClient.stop();
-            tcpClientConnected = false;
+            disconnectTcpClient(nullptr);
             return false;
         }
 
