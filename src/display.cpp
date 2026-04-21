@@ -86,8 +86,15 @@ void screenLoop()
 
     display.setTextSize(2);
     display.setCursor(0, 48);
-    display.print("TX:");
-    display.print(eeprom.all_TX_to_network);
+    if (getNetworkTxQueueCapacity() == 0)
+    {
+        display.print("Q ERR");
+    }
+    else
+    {
+        display.print("TX:");
+        display.print(eeprom.all_TX_to_network);
+    }
 
     display.setTextSize(1);
     display.setCursor(104, 0);

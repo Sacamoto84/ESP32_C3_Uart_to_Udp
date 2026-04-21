@@ -22,3 +22,4 @@ bool sendUdpBroadcast(const char *msg, int len);
 bool isTcpClientConnected();
 uint32_t getDroppedNetworkTxBytes();
 uint32_t getQueuedNetworkTxChunks();
+uint32_t getNetworkTxQueueCapacity();

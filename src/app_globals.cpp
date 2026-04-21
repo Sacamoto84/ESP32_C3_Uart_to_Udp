@@ -9,6 +9,7 @@ QueueHandle_t uartQueue;
 QueueHandle_t networkTxQueue;
 volatile bool tcpClientConnected = false;
 volatile uint32_t droppedNetworkTxBytes = 0;
+volatile uint32_t actualNetworkTxQueueLength = 0;
 
 // База настроек и веб-портал живут всё время работы прошивки.
 GyverDBFile db(&LittleFS, "/data.db", 500);

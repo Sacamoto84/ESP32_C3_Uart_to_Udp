@@ -11,6 +11,12 @@ void networkTxTask(void *arg)
     {
         pollTcpServer();
 
+        if (networkTxQueue == nullptr)
+        {
+            vTaskDelay(pdMS_TO_TICKS(20));
+            continue;
+        }
+
         if (!hasPendingChunk)
         {
             if (xQueueReceive(networkTxQueue, &pendingChunk, pdMS_TO_TICKS(20)) != pdTRUE)

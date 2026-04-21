@@ -126,10 +126,17 @@ void build(sets::Builder &b)
         b.Label("Android подключается к этому ESP32 как TCP client");
         b.Label("Порт TCP сервера: 8888");
 
-        String queueLabel = "Очередь UART->TCP: " + String(NETWORK_TX_QUEUE_LENGTH) +
+        String queueLabel = "Очередь UART->TCP: " + String(getNetworkTxQueueCapacity()) +
                             " x " + String(NETWORK_TX_CHUNK_SIZE) + " байт";
         b.Label(queueLabel.c_str());
-        b.Label("При переполнении новые данные дропаются без краша прошивки");
+        if (getNetworkTxQueueCapacity() == 0)
+        {
+            b.Label("Очередь не создалась, проверьте лог и уменьшите размеры буферов");
+        }
+        else
+        {
+            b.Label("При переполнении новые данные дропаются без краша прошивки");
+        }
     }
 
     b.Switch(kk::echo, "Эхо");
