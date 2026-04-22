@@ -112,6 +112,15 @@
 #define NETWORK_TX_QUEUE_LENGTH 32
 #endif
 
+// Подробный лог каждого успешно обработанного UART-пакета заметно нагружает горячий путь.
+// Включайте только для отладки:
+// -DPROJECT_UART_VERBOSE_LOG=1
+#if defined(PROJECT_UART_VERBOSE_LOG)
+#define PROJECT_UART_VERBOSE_LOG_ENABLED 1
+#else
+#define PROJECT_UART_VERBOSE_LOG_ENABLED 0
+#endif
+
 // Значения по умолчанию для Wi-Fi.
 #define PROJECT_OTA_PORT 3232
 

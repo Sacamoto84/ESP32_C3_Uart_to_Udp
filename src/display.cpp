@@ -63,28 +63,21 @@ void screenLoop()
     display.println(ip);
 
     display.setCursor(0, 11);
-    if (db.get(kk::broadcast))
-    {
-        display.print("Mode: UDP bcast");
-    }
-    else
-    {
-        display.print("TCP: ");
-        display.print(isTcpClientConnected() ? "client on" : "wait client");
-    }
+    display.print("TCP: ");
+    display.print(isTcpClientConnected() ? "client on" : "wait client");
 
     display.setCursor(0, 20);
     display.print("Bitrate: ");
     display.print(db.get(kk::Serial2Bitrate));
 
+    //display.setCursor(0, 29);
+    //display.print(db.get(kk::echo) ? "Echo: True" : "Echo: False");
+    display.setTextSize(2);
     display.setCursor(0, 29);
-    display.print(db.get(kk::echo) ? "Echo: True" : "Echo: False");
-
-    display.setCursor(0, 38);
     display.print("Drop: ");
     display.print(getDroppedNetworkTxBytes());
 
-    display.setTextSize(2);
+    
     display.setCursor(0, 48);
     if (getNetworkTxQueueCapacity() == 0)
     {

@@ -107,23 +107,12 @@ void build(sets::Builder &b)
 
     b.Number(kk::Serial2Bitrate, "Битрейт", nullptr, 300, 4000000);
 
-    if (b.Switch(kk::broadcast, "Броадкаст"))
-    {
-        sett.reload(true);
-    }
-
     const String currentIpLabel = "ESP32 IP: " + currentPortalIp().toString();
     b.Label(currentIpLabel.c_str());
     const String otaLabel = "OTA: " + String(PROJECT_DEVICE_HOSTNAME) + ".local:" + String(PROJECT_OTA_PORT);
     b.Label(otaLabel.c_str());
     b.Label(PROJECT_OTA_PASSWORD_VALUE[0] ? "OTA auth: enabled" : "OTA auth: disabled");
 
-    if (db.get(kk::broadcast))
-    {
-        b.Label("Режим транспорта: UDP broadcast");
-        b.Label("Отправка идет на 255.255.255.255:8888");
-    }
-    else
     {
         b.Label("Режим транспорта: TCP server");
         b.Label("Android подключается к этому ESP32 как TCP client");

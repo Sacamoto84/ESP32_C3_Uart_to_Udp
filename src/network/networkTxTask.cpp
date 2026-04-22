@@ -27,19 +27,6 @@ void networkTxTask(void *arg)
             hasPendingChunk = true;
         }
 
-        if (pendingChunk.useBroadcast)
-        {
-            if (sendUdpBroadcast((const char *)pendingChunk.data, pendingChunk.len))
-            {
-                hasPendingChunk = false;
-            }
-            else
-            {
-                vTaskDelay(pdMS_TO_TICKS(10));
-            }
-            continue;
-        }
-
         if (sendTcpChunk(pendingChunk.data, pendingChunk.len))
         {
             hasPendingChunk = false;

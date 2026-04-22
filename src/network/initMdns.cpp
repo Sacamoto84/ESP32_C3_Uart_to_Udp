@@ -22,7 +22,7 @@ void initMdns()
     MDNS.addServiceTxt("http", "tcp", "path", "/");
     MDNS.addServiceTxt("http", "tcp", "board", BOARD_LABEL);
 
-    MDNS.addService("uartbridge", "tcp", kNetworkDataPort);
+    MDNS.addService("uartbridge", "tcp", kTcpServerPort);
     MDNS.addServiceTxt("uartbridge", "tcp", "transport", "tcp-server");
     MDNS.addServiceTxt("uartbridge", "tcp", "board", BOARD_LABEL);
 

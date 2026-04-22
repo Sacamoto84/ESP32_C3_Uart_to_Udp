@@ -4,11 +4,8 @@
 
 #include "app_globals.h"
 
-#include "lwip/sockets.h"
-#include <lwip/inet.h>
-
 // Общие сетевые константы проекта.
-constexpr uint16_t kNetworkDataPort = 8888;
+constexpr uint16_t kTcpServerPort = 8888;
 constexpr uint16_t kHeartbeatPort = 8888;
 constexpr uint32_t kTcpWriteTimeoutMs = 3000;
 
@@ -17,12 +14,10 @@ constexpr uint32_t kTcpWriteTimeoutMs = 3000;
 struct NetworkTxChunk
 {
     uint16_t len;
-    bool useBroadcast;
     uint8_t data[NETWORK_TX_CHUNK_SIZE];
 };
 
 // Внутренние helper-функции сетевого модуля.
-bool sendUdpPacket(const char *tag, const char *payload, int len, const sockaddr_in &dest, bool enableBroadcast);
 void networkTxTask(void *arg);
 void pollTcpServer();
 void disconnectTcpClient(const char *reason);

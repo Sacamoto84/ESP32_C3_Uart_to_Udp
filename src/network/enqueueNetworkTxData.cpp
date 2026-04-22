@@ -1,6 +1,15 @@
 #include "network_internal.h"
 
-size_t enqueueNetworkTxData(const uint8_t *data, size_t len)
+namespace
+{
+static void IRAM_ATTR fillNetworkTxChunk(NetworkTxChunk &chunk, const uint8_t *src, size_t len)
+{
+    chunk.len = (uint16_t)len;
+    memcpy(chunk.data, src, len);
+}
+} // namespace
+
+size_t IRAM_ATTR enqueueNetworkTxData(const uint8_t *data, size_t len)
 {
     static uint32_t lastOverflowLogAt = 0;
 
@@ -15,7 +24,6 @@ size_t enqueueNetworkTxData(const uint8_t *data, size_t len)
         return 0;
     }
 
-    const bool useBroadcast = db.get(kk::broadcast);
     size_t queuedTotal = 0;
 
     while (queuedTotal < len)
@@ -23,10 +31,8 @@ size_t enqueueNetworkTxData(const uint8_t *data, size_t len)
         const size_t remaining = len - queuedTotal;
         const size_t partLen = (remaining < NETWORK_TX_CHUNK_SIZE) ? remaining : NETWORK_TX_CHUNK_SIZE;
 
-        NetworkTxChunk chunk = {};
-        chunk.len = (uint16_t)partLen;
-        chunk.useBroadcast = useBroadcast;
-        memcpy(chunk.data, data + queuedTotal, partLen);
+        NetworkTxChunk chunk;
+        fillNetworkTxChunk(chunk, data + queuedTotal, partLen);
 
         if (xQueueSend(networkTxQueue, &chunk, 0) != pdTRUE)
         {

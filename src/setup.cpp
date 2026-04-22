@@ -5,6 +5,9 @@
 #include "status_led.h"
 #include "uart_bridge.h"
 
+#include <esp_heap_caps.h>
+#include "esp32-hal-psram.h"
+
 // Порядок важен:
 // сначала базовое железо и FS, потом дисплей и сеть, и только после этого
 // стартуем портал настроек и UART-задачу.

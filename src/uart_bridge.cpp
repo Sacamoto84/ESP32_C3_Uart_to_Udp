@@ -72,7 +72,7 @@ void uartTask(void *arg)
         }
 
         // Читаем не больше локального буфера и оставляем байт под завершающий ноль,
-        // чтобы echo-лог не выходил за границы.
+        // но реально ставим его только когда включен echo-лог.
         const size_t maxRead = (event.size < sizeof(uartDataBuffer) - 1) ? event.size : sizeof(uartDataBuffer) - 1;
         int available = uart_read_bytes(UART_NUM_0, uartDataBuffer, maxRead, 0);
 
@@ -88,10 +88,11 @@ void uartTask(void *arg)
             available = sizeof(uartDataBuffer) - 1;
         }
 
-        uartDataBuffer[available] = '\0';
-
-        if (db.get(kk::echo))
+        const bool echoEnabled = db.get(kk::echo);
+        if (echoEnabled)
         {
+            uartDataBuffer[available] = '\0';
+
             // Echo оставлен как и раньше, чтобы можно было глазами посмотреть,
             // что уходит из UART в транспортный слой.
             Serial.println("NET_tx echo:");
@@ -108,7 +109,7 @@ void uartTask(void *arg)
                           (unsigned)available,
                           (unsigned)getDroppedNetworkTxBytes());
         }
-        else
+        else if (PROJECT_UART_VERBOSE_LOG_ENABLED)
         {
             Serial.printf("TX to network queue: %u bytes, total TX: %d\n",
                           (unsigned)queued,

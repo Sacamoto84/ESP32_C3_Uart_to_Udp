@@ -16,11 +16,8 @@ void handleHeartbeatUdp();
 void handleExternalScreenUdp();
 
 // Помещаем UART-данные в ограниченную очередь.
-// В обычном режиме они уйдут в TCP server, в broadcast-режиме - по UDP broadcast.
-size_t enqueueNetworkTxData(const uint8_t *data, size_t len);
-
-// UDP оставляем только для широковещательных пакетов.
-bool sendUdpBroadcast(const char *msg, int len);
+// Дальше они последовательно уходят в TCP server.
+size_t IRAM_ATTR enqueueNetworkTxData(const uint8_t *data, size_t len);
 
 // Getter'ы для UI, локального экрана и отладки.
 bool isTcpClientConnected();

@@ -1,340 +1,343 @@
 # ESP32 UART to TCP Bridge
 
-![Логотип](images/img0.png)
+![ESP32 UART to TCP Bridge](images/img0.png)
 
-Проект превращает ESP32 в мост между UART и сетью.
-В обычном режиме ESP32 поднимает TCP server на порту `8888`, а Android
-подключается к нему как TCP client и получает байты в том же порядке, как они
-пришли из UART.
+Прошивка превращает ESP32 в сетевой мост `UART -> TCP`, чтобы Android-приложение `TerminalM3` могло подключаться к устройству как TCP-клиент, получать поток данных из UART и показывать его в терминале.
 
-UDP в проекте оставлен только для двух отдельных задач:
+Актуальная схема работы такая:
 
-- `broadcast` режим для широковещательной отправки
-- внешний экран по UDP на порт `82` при экранной сборке
+- ESP32 поднимает `TCP server` на порту `8888`
+- Android сам подключается к ESP32 как `TCP client`
+- `UDP` больше не используется для передачи UART-данных
+- `UDP` оставлен только для двух служебных задач:
+  - heartbeat `ping/pong` на порту `8888`
+  - внешний экран OLED framebuffer на порту `82`, если эта функция включена
 
-## Возможности
+## Что умеет проект
 
-- передача данных из UART в TCP server на порту `8888`
-- Android работает как TCP client и подключается к IP самого ESP32
-- режим `broadcast` по UDP на `255.255.255.255:8888`
-- защита от переполнения: между UART и сетью стоит ограниченная очередь чанков
-- при переполнении новые данные дропаются без краша прошивки
-- Wi-Fi в режиме `STA` с автоматическим переходом в `AP`, если сеть недоступна
-- опциональная статическая IP-настройка для самого ESP32
-- настройка параметров через веб-интерфейс `SettingsGyver`
-- опциональный OLED-дисплей `SSD1306 128x64`
-- режим `echo` для отладки
-- внешний экран по UDP на порт `82` для экранной сборки
-- настройка мощности Wi-Fi
-- настройка яркости локального OLED через числовое поле `0..255`
-- опциональный встроенный статусный светодиод платы
-- линия сброса внешнего устройства
-- безэкранный вариант сборки через compile-time флаг
+- Передавать поток данных из UART в TCP-соединение без UDP-broadcast.
+- Держать отдельную очередь `UART -> TCP`, чтобы медленная сеть не блокировала чтение UART.
+- Автоматически использовать `PSRAM` под сетевую очередь, если она есть.
+- Поднимать web-портал настроек на ESP32.
+- Работать с `DHCP` или `static IP`.
+- Публиковать сервисы через `mDNS`.
+- Поддерживать `OTA`-обновление.
+- Показывать локальный статус на OLED, если сборка с экраном.
+- Работать в режиме точки доступа `AP ESP32`, если подключение к Wi-Fi не удалось.
+
+## Актуальная архитектура
+
+### 1. Передача данных UART
+
+Основной транспорт теперь только один:
+
+```text
+UART -> очередь -> TCP server:8888 -> Android TCP client
+```
+
+ESP32 не рассылает UART-поток через UDP-broadcast. Это удалено из проекта.
+
+### 2. Heartbeat между Android и ESP32
+
+Для контроля соединения используется отдельный `UDP heartbeat`.
+
+- Android шлет на ESP32 строку вида:
+
+```text
+tm3 hb ping seq=123
+```
+
+- ESP32 отвечает обратно на IP и порт отправителя:
+
+```text
+tm3 hb pong seq=123
+```
+
+Текущие параметры по коду:
+
+- UDP порт heartbeat: `8888`
+- Android считает соединение пропавшим, если `pong` не приходит примерно `3` секунды
+- в Android heartbeat сейчас запускается отдельным клиентом и используется как индикатор живого соединения
+
+### 3. Внешний экран по UDP
+
+Если сборка идет с экраном и в настройках включен внешний экран, ESP32 слушает UDP-порт `82` и принимает framebuffer для OLED.
+
+Это отдельный режим и он не связан с передачей UART в Android.
+
+## Сетевые порты и сервисы
+
+### Порты
+
+- `TCP 8888` - основной сервер UART -> Android
+- `UDP 8888` - heartbeat `ping/pong`
+- `UDP 82` - внешний экран OLED framebuffer, если включен
+- `TCP 80` - web-портал настроек
+- `TCP 3232` - OTA
+
+### mDNS
+
+ESP32 публикует:
+
+- `http.tcp` на порту `80`
+- `uartbridge.tcp` на порту `8888`
+  - TXT: `transport=tcp-server`
+  - TXT: `board=<имя платы>`
+- `external-screen.udp` на порту `82`, если есть экран и включен внешний экран
+
+Имя хоста задается через `PROJECT_OTA_HOSTNAME`, либо берется по умолчанию:
+
+- `esp32-c3-uart`
+- `esp32-s2-uart`
 
 ## Поддерживаемые платы
 
-### ESP32-C3
+## ESP32-C3
 
-- Environment в `PlatformIO`: `esp32-c3-devkitm-1`
-- дисплей: `SSD1306 128x64` по `SPI`
-- UART:
-  - `TX = GPIO21`
-  - `RX = GPIO20`
-- встроенный статусный светодиод платы: `GPIO8` при сборке с `-DPROJECT_USE_BOARD_LED=1`
-- линия сброса внешнего устройства: `GPIO9`
-
-Подключение дисплея:
+Environment в `PlatformIO`:
 
 ```text
-ESP32-C3     OLED SSD1306
-GPIO 6   ->  MOSI
-GPIO 4   ->  CLK
-GPIO 3   ->  DC
-GPIO 1   ->  CS
-GPIO 2   ->  RESET
+esp32-c3-devkitm-1
+esp32-c3-devkitm-1_ota
 ```
 
-### ESP32-S2 Mini
+Пины:
 
-- Environment в `PlatformIO`: `lolin_s2_mini`
-- дисплей: `SSD1306 128x64` по `I2C`
-- адрес дисплея: `0x3C`
-- I2C:
-  - `SDA = GPIO18`
-  - `SCL = GPIO33`
-- UART:
-  - `TX = GPIO5`
-  - `RX = GPIO3`
-- встроенный статусный светодиод платы: `GPIO15` при сборке с `-DPROJECT_USE_BOARD_LED=1`
-- при старте:
-  - `GPIO35` устанавливается в `HIGH`
-  - `GPIO37` устанавливается в `LOW`
-- линия сброса внешнего устройства: `GPIO37`
+- `UART TX = GPIO21`
+- `UART RX = GPIO20`
+- `AP_MODE_PIN = GPIO8`
+- `RESET_PULSE_PIN = GPIO9`
+- встроенный LED: `GPIO8`
 
-## Архитектура транспорта
+OLED `SSD1306` подключен по `SPI`:
 
-### Обычный режим
+```text
+GPIO6  -> MOSI
+GPIO4  -> CLK
+GPIO3  -> DC
+GPIO1  -> CS
+GPIO2  -> RESET
+```
 
-- ESP32 поднимает `TCP server` на порту `8888`
-- Android подключается к IP ESP32 как `TCP client`
-- данные из UART уходят в ограниченную очередь чанков
-- отдельная `networkTxTask` принимает TCP клиента и последовательно отправляет чанки в сокет
+## ESP32-S2 Mini
 
-### Broadcast режим
+Environment в `PlatformIO`:
 
-- если включён `broadcast`, UART-данные отправляются по UDP на `255.255.255.255:8888`
-- TCP в этот момент не используется для выдачи UART-потока
+```text
+lolin_s2_mini
+lolin_s2_mini_ota
+```
 
-### Защита от переполнений
+Пины:
 
-Между UART и сетью стоит ограниченная очередь фиксированных чанков.
-Это нужно, чтобы медленная сеть не блокировала чтение UART и не приводила к
-крашу или неограниченному росту буферов.
+- `UART TX = GPIO5`
+- `UART RX = GPIO3`
+- `RESET_PULSE_PIN = GPIO9`
+- встроенный LED: `GPIO15`
+- `BOOT_HIGH_PIN = GPIO36`
+- `BOOT_LOW_PIN = GPIO38`
 
-Если сеть не успевает:
+OLED `SSD1306` подключен по `I2C`:
 
-- уже поставленные чанки сохраняют порядок
-- новые данные, которые не помещаются в очередь, дропаются
-- количество дропнутых байт видно в логах и на локальном экране
+```text
+SDA   -> GPIO21
+SCL   -> GPIO34
+ADDR  -> 0x3C
+RESET -> -1
+```
 
-Важно: TCP сохраняет порядок байт, но не сохраняет границы отдельных `write()`.
-На Android поток нужно разбирать как непрерывный byte stream.
+## Порядок инициализации
 
-## Структура проекта
+В `setup()` проект стартует в таком порядке:
 
-Заголовочные файлы лежат в `include/`, реализации - в `src/`.
+1. `initPins()`
+2. `initSerialAndFS()`
+3. `initStatusLed()`
+4. `initDisplay()`
+5. `initWiFi()`
+6. `initSettings()`
+7. `initTcpServer()`
+8. `initUDP()`
+9. `initMdns()`
+10. `initOTA()`
+11. `initUART()`
 
-Основные модули:
+Такой порядок важен: сначала железо и сеть, потом web-портал, TCP и только после этого UART-задача.
 
-- `include/define.h` - общие define'ы, выбор платы, compile-time флаги
-- `include/eeprom.h` - ключи настроек и singleton с инициализацией БД
-- `include/network_bridge.h` - публичный интерфейс сетевого модуля
-- `src/app_globals.cpp` - общие глобальные объекты проекта
-- `src/hardware.cpp` - инициализация пинов, `Serial`, `LittleFS`
-- `src/display.cpp` - локальный OLED и экран состояния
-- `src/settings_portal.cpp` - веб-портал настроек `SettingsGyver`
-- `src/uart_bridge.cpp` - чтение UART и постановка данных в сетевую очередь
-- `src/status_led.cpp` - отдельная FreeRTOS задача управления LED
-- `src/network/` - сетевые функции в Android-подобном стиле: один `.cpp` = одна функция
+## Как работает цикл loop()
 
-Ключевые файлы в `src/network/`:
+В основном цикле выполняется:
 
-- `initWiFi.cpp` - подключение Wi-Fi и fallback в `AP`
-- `initTcpServer.cpp` - старт TCP server и очереди передачи
-- `networkTxTask.cpp` - отдельная задача выдачи чанков в TCP/UDP
-- `enqueueNetworkTxData.cpp` - постановка UART-данных в ограниченную очередь
-- `pollTcpServer.cpp` - приём входящего Android TCP client
-- `sendTcpChunk.cpp` - отправка одного чанка в TCP сокет
-- `sendUdpBroadcast.cpp` - broadcast-отправка на `255.255.255.255:8888`
-- `sendUdpPacket.cpp` - общая helper-функция UDP отправки
-- `initUDP.cpp` - старт UDP на порту `82` только для экранной сборки
-- `handleExternalScreenUdp.cpp` - обработка framebuffer для внешнего экрана
+- `tickOTA()`
+- `sett.tick()`
+- `db.tick()`
+- `handleHeartbeatUdp()`
 
-## Сборка
+Если включен режим внешнего экрана, OLED обслуживается входящими UDP-пакетами framebuffer. Иначе локальный статусный экран обновляется примерно раз в `2` секунды.
 
-Установите `PlatformIO`, откройте проект и выберите нужное окружение.
+## Wi-Fi логика
 
-Сборка для `ESP32-C3`:
+Прошивка работает так:
+
+- стартует в режиме `STA`
+- при включенном `static IP` сначала пытается применить адрес, шлюз и маску
+- мощность Wi-Fi берется из настроек
+- если подключение не удалось, делает повторную попытку с мощностью `8.5 dBm`
+- если снова не удалось, переключается в `AP` режим
+- имя точки доступа fallback-режима: `AP ESP32`
+
+Перед инициализацией Wi-Fi частота CPU понижается до `80 MHz`.
+
+## Очередь UART -> TCP и PSRAM
+
+Проект использует очередь между UART и TCP, чтобы сеть не тормозила прием данных из UART.
+
+Один элемент очереди:
+
+```cpp
+struct NetworkTxChunk {
+    uint16_t len;
+    uint8_t data[NETWORK_TX_CHUNK_SIZE];
+};
+```
+
+Текущее поведение:
+
+- сначала проект пытается создать очередь в `PSRAM`
+- если не получилось, пытается создать очередь во внутренней RAM
+- если памяти не хватает, автоматически уменьшает длину очереди в 2 раза, пока не найдет рабочий вариант
+- если очередь так и не создалась, TCP server все равно стартует, чтобы это было видно в диагностике
+
+Текущие compile-time размеры:
+
+- `PROJECT_NETWORK_TX_CHUNK_SIZE = 1460`
+- `PROJECT_NETWORK_TX_QUEUE_LENGTH = 64` для `ESP32-C3`
+- `PROJECT_NETWORK_TX_QUEUE_LENGTH = 256` для `ESP32-S2 Mini`
+
+Дополнительно:
+
+- драйверный RX-буфер UART: `64 KB`
+- локальный буфер чтения из UART: `NETWORK_TX_CHUNK_SIZE * 4`
+- таймаут записи TCP: `3000 ms`
+
+Если очередь переполняется, новые данные дропаются без краша прошивки, а в лог пишется счетчик потерь.
+
+## Web-портал настроек
+
+Портал настроек поднимается на ESP32 и позволяет менять:
+
+- bitrate UART
+- SSID и пароль Wi-Fi
+- включение `static IP`
+- `static IP`, `gateway`, `subnet`
+- `echo`
+- мощность передатчика Wi-Fi
+- яркость OLED, если экран есть
+- включение внешнего экрана по UDP `82`, если экран есть
+- перезагрузку ESP32
+- аппаратный импульс сброса на внешнее устройство
+- очистку базы настроек
+
+В портале также показываются:
+
+- текущий IP ESP32
+- строка OTA вида `hostname.local:3232`
+- состояние OTA auth
+- режим транспорта: `TCP server`
+- фактический размер очереди `UART -> TCP`
+
+## OTA
+
+Параметры по умолчанию:
+
+- OTA порт: `3232`
+- hostname для `ESP32-C3`: `esp32-c3-uart`
+- hostname для `ESP32-S2 Mini`: `esp32-s2-uart`
+
+Environment для OTA:
+
+```text
+esp32-c3-devkitm-1_ota
+lolin_s2_mini_ota
+```
+
+Примеры:
 
 ```bash
-platformio run -e esp32-c3-devkitm-1
+platformio run --environment esp32-c3-devkitm-1
+platformio run --environment esp32-c3-devkitm-1_ota --target upload
+platformio run --environment lolin_s2_mini
+platformio run --environment lolin_s2_mini_ota --target upload
 ```
 
-Сборка для `ESP32-S2 Mini`:
+## Полезные build flags
 
-```bash
-platformio run -e lolin_s2_mini
-```
-
-## Безэкранная сборка
-
-Для варианта без локального OLED добавьте флаг:
+### Без экрана
 
 ```text
 -DPROJECT_NO_SCREEN=1
 ```
 
-в `build_flags` нужного environment в `platformio.ini`.
-
-Что отключается:
-
-- локальный OLED-дисплей
-- управление яркостью экрана
-- локальный экран состояния
-- режим внешнего экрана по UDP
-- сервер UDP на порту `82` для внешнего экрана
-
-Остальная логика продолжает работать:
-
-- Wi-Fi
-- веб-портал настроек
-- UART -> TCP
-- `broadcast`
-- `echo`
-- настройка мощности Wi-Fi
-
-## Светодиод платы
-
-Для включения логики встроенного статусного LED добавьте:
+### Встроенный LED платы
 
 ```text
 -DPROJECT_USE_BOARD_LED=1
 ```
 
-Для переопределения полярности:
+### Полярность LED
 
 ```text
 -DPROJECT_BOARD_LED_ACTIVE_LOW=1
-```
-
-или
-
-```text
 -DPROJECT_BOARD_LED_ACTIVE_LOW=0
 ```
 
-Где:
-
-- `1` - светодиод светит при уровне `LOW`
-- `0` - светодиод светит при уровне `HIGH`
-
-Для ограничения яркости через PWM:
+### Яркость LED через PWM
 
 ```text
 -DPROJECT_BOARD_LED_BRIGHTNESS=32
 ```
 
-Диапазон: `0..255`.
-
-Логика LED:
-
-- при старте и подключении к Wi-Fi станции - обычное мигание
-- после успешного подключения к `STA` - постоянное свечение
-- при сетевой передаче в режиме `STA` - краткий импульс активности
-- в режиме точки доступа `AP` - быстрое мигание
-
-LED работает как отдельная FreeRTOS-задача и получает только команды через
-`StatusLedCommand`, а не прямое управление пином из разных мест проекта.
-
-## Настройка через портал
-
-Через веб-интерфейс можно задать:
-
-- скорость UART
-- режим `broadcast`
-- режим `echo`
-- параметры Wi-Fi
-- использование `DHCP` или `static IP` для ESP32
-- статический IP, gateway и subnet mask для ESP32
-- мощность Wi-Fi
-- яркость локального экрана `0..255` при экранной сборке
-- использование внешнего экрана по UDP при экранной сборке
-
-Также через портал доступны:
-
-- перезагрузка ESP32
-- аппаратный импульс сброса на внешнее устройство
-- очистка базы настроек
-
-## Android
-
-В папке `androidLib/` лежит пример Android-стороны для нового режима на `Ktor`.
-
-Теперь Android не поднимает сервер, а сам подключается к ESP32:
-
-- ESP32 слушает TCP на порту `8888`
-- Android запускает `EspTcpBridgeClient`
-- в `host` передаётся IP ESP32
-- `incomingChunks` нужно обрабатывать как непрерывный поток байт
-
-## Сетевые параметры
-
-- передача данных по TCP: порт `8888`
-- передача данных по UDP broadcast: порт `8888`
-- внешний экран по UDP: порт `82` только для экранной сборки
-- скорость лога в `Serial`: `460800`
-
-## Compile-time tuning
-
-Размер и глубину очереди между UART и сетью можно переопределить:
+### Размеры сетевых буферов
 
 ```text
--DPROJECT_NETWORK_TX_CHUNK_SIZE=1024
--DPROJECT_NETWORK_TX_QUEUE_LENGTH=32
+-DPROJECT_NETWORK_TX_CHUNK_SIZE=1460
+-DPROJECT_NETWORK_TX_QUEUE_LENGTH=256
 ```
 
-По умолчанию:
+### Подробный лог UART hot path
 
-- размер чанка: `1024` байта
-- длина очереди: `32` чанка
-
-## Примечания
-
-- на некоторых мини-платах Wi-Fi может работать нестабильно при мощности выше `8.5 dBm`
-- для `ESP32-S2 Mini` дисплей и UART уже разведены на разные пины, чтобы их можно было использовать одновременно
-- для внешнего экрана ожидается пакет ровно `1024` байта, это размер framebuffer для `SSD1306 128x64`
-- в безэкранной сборке экранный код не просто скрыт в UI, а выключается на этапе компиляции
-- ключи `ipClient` и `useTcpTransport` оставлены в БД как legacy, чтобы старые файлы настроек не ломались после обновления
-
-## Зависимости
-
-- Arduino framework для ESP32
-- Adafruit SSD1306
-- GyverLibs: `SettingsGyver`, `GyverDBFile`, `GTimer`, `StringUtils`, `mString`
-
-## Версия
-
-Текущая версия: `1.6.3`
-
-## Лицензия
-
-## PlatformIO OTA
-
-The firmware now starts `ArduinoOTA` on port `3232` and processes OTA packets
-from the main `loop()`, so PlatformIO can upload firmware over Wi-Fi.
-
-Default hostnames:
-
-- `esp32-c3-uart.local`
-- `esp32-s2-uart.local`
-
-The settings portal also shows the current OTA hostname and whether OTA
-authentication is enabled.
-
-First flash is still done over USB:
-
-```bash
-platformio run -e lolin_s2_mini -t upload
-```
-
-After that you can upload over Wi-Fi:
-
-```bash
-platformio run -e lolin_s2_mini_ota -t upload
-platformio run -e esp32-c3-devkitm-1_ota -t upload
-```
-
-If mDNS resolution does not work on the PC, use a direct IP address:
-
-```bash
-platformio run -e lolin_s2_mini_ota -t upload --upload-port 192.168.0.222
-```
-
-Optional password can be enabled from `build_flags`:
+Включать только для отладки, потому что заметно нагружает быстрый путь:
 
 ```text
--DPROJECT_OTA_PASSWORD=\"change-me\"
+-DPROJECT_UART_VERBOSE_LOG=1
 ```
 
-If OTA password is enabled, add the same password to the OTA environment:
+### OTA hostname и пароль
 
 ```text
-upload_flags =
-    --port=3232
-    --auth=change-me
+-DPROJECT_OTA_HOSTNAME="my-esp32-bridge"
+-DPROJECT_OTA_PASSWORD="change-me"
 ```
 
-`default.csv` partition table is now selected explicitly in `platformio.ini`,
-because OTA needs two application slots in flash.
+## Запуск с Android TerminalM3
 
-MIT
+Android-приложение работает с этой прошивкой по такой схеме:
+
+1. Android определяет IP ESP32 автоматически или берет его из ручной настройки.
+2. Android открывает `TCP` соединение на `8888`.
+3. Параллельно Android шлет heartbeat `ping` по `UDP 8888`.
+4. Если heartbeat пропадает, Android считает сервер потерянным, роняет TCP-сокет и пытается переподключиться.
+
+Это позволяет отдельно контролировать жив ли сервер, даже если TCP еще не успел сам отвалиться по таймаутам ОС.
+
+## Актуальные замечания
+
+- Передача UART по `UDP broadcast` удалена и больше не используется.
+- Ключ `broadcast` в EEPROM оставлен только как legacy-след для совместимости базы настроек.
+- README составлен по текущему состоянию кода, а не по старой архитектуре проекта.
+
+## Связанные документы
+
+- [Корневой README проекта Android TerminalM3](../README.md)
+- [README консольных виджетов Android](../app/src/main/java/com/example/terminalm3/console/README.md)
+- [README библиотеки TimberWidget для Arduino/PlatformIO](../TimberWidget/README.md)

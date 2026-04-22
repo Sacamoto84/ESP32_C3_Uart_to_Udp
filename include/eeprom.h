@@ -11,7 +11,7 @@ extern GyverDBFile db;
 // GyverDBFile сам сохраняет изменения в файл при update().
 
 // Имена ячеек базы данных.
-// ipClient и useTcpTransport оставлены как legacy-ключи,
+// ipClient, broadcast и useTcpTransport оставлены как legacy-ключи,
 // чтобы старые базы настроек спокойно открывались после обновления прошивки.
 DB_KEYS(
     kk,
@@ -64,7 +64,6 @@ private:
         // если такой ячейки ещё нет в БД.
         db.init(kk::ipClient, "192.168.0.100");
         db.init(kk::echo, true);
-        db.init(kk::broadcast, false);
         db.init(kk::timeout, 1000);
         db.init(kk::Serial2Bitrate, 9800);
         db.init(kk::WIFI_SSID, "TP-Link_BC0C");
