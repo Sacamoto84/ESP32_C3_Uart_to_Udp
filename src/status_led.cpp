@@ -16,6 +16,7 @@ constexpr uint8_t kStatusLedQueueLength = 8;
 constexpr uint32_t kStatusLedPwmFreq = 5000;
 constexpr uint8_t kStatusLedPwmResolution = 8;
 constexpr uint32_t kStatusLedPwmMaxDuty = (1UL << kStatusLedPwmResolution) - 1;
+constexpr uint8_t kStatusLedPwmChannel = 0;
 
 QueueHandle_t statusLedQueue = nullptr;
 TaskHandle_t statusLedTaskHandle = nullptr;
@@ -52,7 +53,8 @@ void writeStatusLed(bool enabled)
         return;
     }
 
-    ledcWrite(STATUS_LED_BOARD_PIN, statusLedRawDuty(enabled));
+    // В старом Arduino-ESP32 PWM пишется в канал, а не напрямую в GPIO.
+    ledcWrite(kStatusLedPwmChannel, statusLedRawDuty(enabled));
 }
 
 uint32_t currentBlinkPeriod(StatusLedCommand mode)
@@ -72,6 +74,7 @@ void applyStatusLedState(const StatusLedState &state)
     switch (state.mode)
     {
     case StatusLedCommand::Off:
+    case StatusLedCommand::WaitingForClient:
         writeStatusLed(false);
         break;
 
@@ -80,7 +83,7 @@ void applyStatusLedState(const StatusLedState &state)
         writeStatusLed(state.blinkState);
         break;
 
-    case StatusLedCommand::StationConnected:
+    case StatusLedCommand::ClientConnected:
         // В STA-режиме LED горит постоянно, а на сетевую передачу кратко гаснет.
         writeStatusLed(!activityPulseActive(state, now));
         break;
@@ -98,7 +101,8 @@ void handleStatusLedCommand(StatusLedState &state, StatusLedCommand command)
     {
     case StatusLedCommand::Off:
     case StatusLedCommand::ConnectingToStation:
-    case StatusLedCommand::StationConnected:
+    case StatusLedCommand::WaitingForClient:
+    case StatusLedCommand::ClientConnected:
     case StatusLedCommand::AccessPoint:
         state.mode = command;
         state.blinkState = false;
@@ -106,7 +110,7 @@ void handleStatusLedCommand(StatusLedState &state, StatusLedCommand command)
         break;
 
     case StatusLedCommand::PulseNetworkActivity:
-        if (state.mode == StatusLedCommand::StationConnected)
+        if (state.mode == StatusLedCommand::ClientConnected)
         {
             state.activityPulseUntil = millis() + kNetworkPulseMs;
         }
@@ -122,7 +126,7 @@ TickType_t statusLedWaitTicks(const StatusLedState &state)
     case StatusLedCommand::AccessPoint:
         return pdMS_TO_TICKS(currentBlinkPeriod(state.mode));
 
-    case StatusLedCommand::StationConnected:
+    case StatusLedCommand::ClientConnected:
         if (state.activityPulseUntil)
         {
             uint32_t now = millis();
@@ -150,7 +154,7 @@ void onStatusLedTimeout(StatusLedState &state)
         state.blinkState = !state.blinkState;
         break;
 
-    case StatusLedCommand::StationConnected:
+    case StatusLedCommand::ClientConnected:
         if (state.activityPulseUntil && (int32_t)(millis() - state.activityPulseUntil) >= 0)
         {
             state.activityPulseUntil = 0;
@@ -199,31 +203,52 @@ void initStatusLed()
         return;
     }
 
-    if (!ledcAttach(STATUS_LED_BOARD_PIN, kStatusLedPwmFreq, kStatusLedPwmResolution))
+    Serial.printf("Status LED init: pin=%u active_low=%u brightness=%u\n",
+                  (unsigned)STATUS_LED_BOARD_PIN,
+                  (unsigned)STATUS_LED_ACTIVE_LOW,
+                  (unsigned)STATUS_LED_BRIGHTNESS);
+
+    // В framework, который сейчас стоит в проекте, используется классическая
+    // связка ledcSetup + ledcAttachPin. Частота 0 означает неуспешную настройку.
+    if (ledcSetup(kStatusLedPwmChannel, kStatusLedPwmFreq, kStatusLedPwmResolution) == 0)
     {
-        Serial.println("Status LED PWM attach failed");
+        Serial.println("Status LED PWM setup failed");
         return;
     }
 
+    // В этой версии Arduino-ESP32 ledcReadFreq() возвращает 0, если текущий duty
+    // канала равен 0. Поэтому ей нельзя валидировать attach на холодном старте:
+    // мы как раз начинаем с погашенного LED.
+    ledcAttachPin(STATUS_LED_BOARD_PIN, kStatusLedPwmChannel);
     statusLedPwmReady = true;
     writeStatusLed(false);
 
     statusLedQueue = xQueueCreate(kStatusLedQueueLength, sizeof(StatusLedCommand));
     if (!statusLedQueue)
     {
-        ledcDetach(STATUS_LED_BOARD_PIN);
+        ledcDetachPin(STATUS_LED_BOARD_PIN);
         statusLedPwmReady = false;
         return;
     }
 
-    xTaskCreatePinnedToCore(
+    if (xTaskCreatePinnedToCore(
         statusLedTask,
         "statusLedTask",
         kStatusLedTaskStack,
         nullptr,
         kStatusLedTaskPriority,
         &statusLedTaskHandle,
-        kStatusLedTaskCore);
+        kStatusLedTaskCore) != pdPASS)
+    {
+        Serial.println("Status LED task create failed");
+        vQueueDelete(statusLedQueue);
+        statusLedQueue = nullptr;
+        ledcDetachPin(STATUS_LED_BOARD_PIN);
+        statusLedPwmReady = false;
+        return;
+    }
+
+    Serial.println("Status LED ready");
 #endif
 }
 

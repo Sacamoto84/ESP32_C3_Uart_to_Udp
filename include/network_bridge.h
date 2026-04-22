@@ -9,6 +9,9 @@ String WifiCurrentPowerString(int power);
 void initWiFi();
 void initUDP();
 void initTcpServer();
+void initMdns();
+void initOTA();
+void tickOTA();
 void handleExternalScreenUdp();
 
 // Помещаем UART-данные в ограниченную очередь.

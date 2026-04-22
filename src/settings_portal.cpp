@@ -87,7 +87,7 @@ void initSettings()
 {
     // Инициализируем веб-портал настроек и привязываем callback,
     // который полностью строит интерфейс страницы.
-    sett.begin();
+    sett.begin(true, "esp");
     sett.onBuild(build);
 }
 
@@ -114,6 +114,9 @@ void build(sets::Builder &b)
 
     const String currentIpLabel = "ESP32 IP: " + currentPortalIp().toString();
     b.Label(currentIpLabel.c_str());
+    const String otaLabel = "OTA: " + String(PROJECT_DEVICE_HOSTNAME) + ".local:" + String(PROJECT_OTA_PORT);
+    b.Label(otaLabel.c_str());
+    b.Label(PROJECT_OTA_PASSWORD_VALUE[0] ? "OTA auth: enabled" : "OTA auth: disabled");
 
     if (db.get(kk::broadcast))
     {

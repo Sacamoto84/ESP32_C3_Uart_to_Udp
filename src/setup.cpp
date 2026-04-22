@@ -11,12 +11,14 @@
 void setup()
 {
     initPins();
-    initStatusLed();
     initSerialAndFS();
+    initStatusLed();
     initDisplay();
     initWiFi();
     initSettings();
     initTcpServer();
-    initUART();
     initUDP();
+    initMdns();
+    initOTA();
+    initUART();
 }

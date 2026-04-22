@@ -67,7 +67,7 @@
 #define AP_MODE_PIN -1
 #define RESET_PULSE_PIN 9                // Пин для сброса открытый коллектор
 #define STATUS_LED_BOARD_PIN 15          // Светодиод на плате
-#define STATUS_LED_ACTIVE_LOW_DEFAULT 1
+#define STATUS_LED_ACTIVE_LOW_DEFAULT 0  // LOLIN S2 Mini built-in LED is high-active
 #elif defined(HW_VARIANT_ESP32_C3)
 #define BOARD_LABEL "ESP32-C3"
 #define OLED_USE_I2C 0
@@ -113,6 +113,24 @@
 #endif
 
 // Значения по умолчанию для Wi-Fi.
+#define PROJECT_OTA_PORT 3232
+
+#if defined(PROJECT_OTA_HOSTNAME)
+#define PROJECT_DEVICE_HOSTNAME PROJECT_OTA_HOSTNAME
+#elif defined(HW_VARIANT_ESP32_S2_MINI)
+#define PROJECT_DEVICE_HOSTNAME "esp32-s2-uart"
+#elif defined(HW_VARIANT_ESP32_C3)
+#define PROJECT_DEVICE_HOSTNAME "esp32-c3-uart"
+#else
+#define PROJECT_DEVICE_HOSTNAME "esp32-uart"
+#endif
+
+#if defined(PROJECT_OTA_PASSWORD)
+#define PROJECT_OTA_PASSWORD_VALUE PROJECT_OTA_PASSWORD
+#else
+#define PROJECT_OTA_PASSWORD_VALUE ""
+#endif
+
 #define AP_SSID "TP-Link_BC0C"
 #define AP_PASS "58133514"
 

@@ -167,7 +167,7 @@ void initWiFi()
     }
     else
     {
-        sendStatusLedCommand(StatusLedCommand::StationConnected);
+        sendStatusLedCommand(StatusLedCommand::WaitingForClient);
     }
 
 #if PROJECT_HAS_SCREEN

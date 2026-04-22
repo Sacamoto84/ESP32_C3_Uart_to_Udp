@@ -1,4 +1,5 @@
 #include "network_internal.h"
+#include "status_led.h"
 
 void pollTcpServer()
 {
@@ -29,6 +30,7 @@ void pollTcpServer()
 
     tcpClient = newClient;
     tcpClientConnected = true;
+    sendStatusLedCommand(StatusLedCommand::ClientConnected);
 
     Serial.printf("pollTcpServer: TCP client connected from %s:%u\n",
                   tcpClient.remoteIP().toString().c_str(),

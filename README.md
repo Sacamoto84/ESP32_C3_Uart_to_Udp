@@ -288,4 +288,53 @@ LED работает как отдельная FreeRTOS-задача и полу
 
 ## Лицензия
 
+## PlatformIO OTA
+
+The firmware now starts `ArduinoOTA` on port `3232` and processes OTA packets
+from the main `loop()`, so PlatformIO can upload firmware over Wi-Fi.
+
+Default hostnames:
+
+- `esp32-c3-uart.local`
+- `esp32-s2-uart.local`
+
+The settings portal also shows the current OTA hostname and whether OTA
+authentication is enabled.
+
+First flash is still done over USB:
+
+```bash
+platformio run -e lolin_s2_mini -t upload
+```
+
+After that you can upload over Wi-Fi:
+
+```bash
+platformio run -e lolin_s2_mini_ota -t upload
+platformio run -e esp32-c3-devkitm-1_ota -t upload
+```
+
+If mDNS resolution does not work on the PC, use a direct IP address:
+
+```bash
+platformio run -e lolin_s2_mini_ota -t upload --upload-port 192.168.0.222
+```
+
+Optional password can be enabled from `build_flags`:
+
+```text
+-DPROJECT_OTA_PASSWORD=\"change-me\"
+```
+
+If OTA password is enabled, add the same password to the OTA environment:
+
+```text
+upload_flags =
+    --port=3232
+    --auth=change-me
+```
+
+`default.csv` partition table is now selected explicitly in `platformio.ini`,
+because OTA needs two application slots in flash.
+
 MIT

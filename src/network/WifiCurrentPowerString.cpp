@@ -22,9 +22,6 @@ constexpr WifiPowerLabel kWifiPowerLabels[] = {
     {WIFI_POWER_18_5dBm, "18.5 dBm"},
     {WIFI_POWER_19dBm, "19 dBm"},
     {WIFI_POWER_19_5dBm, "19.5 dBm"},
-    {WIFI_POWER_20dBm, "20 dBm"},
-    {WIFI_POWER_20_5dBm, "20.5 dBm"},
-    {WIFI_POWER_21dBm, "21 dBm"},
 };
 } // namespace
 

@@ -9,6 +9,9 @@
 // крутим SettingsGyver, обслуживаем БД и обновляем нужный режим экрана.
 void loop()
 {
+    // OTA must be serviced in the main loop, otherwise PlatformIO can open
+    // the OTA session but the firmware will not consume incoming data.
+    tickOTA();
     sett.tick();
     db.tick();
 

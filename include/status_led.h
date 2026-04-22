@@ -8,7 +8,8 @@ enum class StatusLedCommand : uint8_t
 {
     Off = 0,
     ConnectingToStation,
-    StationConnected,
+    WaitingForClient,
+    ClientConnected,
     AccessPoint,
     PulseNetworkActivity,
 };
