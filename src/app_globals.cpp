@@ -3,6 +3,7 @@
 // Общие объекты вынесены в отдельный translation unit,
 // чтобы не размазывать определения по main.cpp и setup.cpp.
 WiFiUDP udp;
+WiFiUDP heartbeatUdp;
 WiFiServer tcpServer(8888);
 WiFiClient tcpClient;
 QueueHandle_t uartQueue;

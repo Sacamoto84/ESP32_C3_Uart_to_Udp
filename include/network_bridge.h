@@ -12,6 +12,7 @@ void initTcpServer();
 void initMdns();
 void initOTA();
 void tickOTA();
+void handleHeartbeatUdp();
 void handleExternalScreenUdp();
 
 // Помещаем UART-данные в ограниченную очередь.

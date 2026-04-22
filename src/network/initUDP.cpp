@@ -1,12 +1,13 @@
 #include "network_internal.h"
 
-// Инициализация UDP для внешнего экрана.
-// В безэкранной сборке порт 82 вообще не поднимаем, потому что принимать framebuffer некому.
+// Инициализация UDP:
+// - heartbeat/ping-pong всегда слушаем на 8888
+// - UDP внешнего экрана на 82 поднимаем только когда экран действительно есть
 void initUDP()
 {
-#if !PROJECT_HAS_SCREEN
-    return;
-#else
+    heartbeatUdp.begin(kHeartbeatPort);
+
+#if PROJECT_HAS_SCREEN
     udp.begin(82);
 #endif
 }

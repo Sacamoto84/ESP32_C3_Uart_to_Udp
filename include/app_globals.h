@@ -5,6 +5,7 @@
 // Общие глобальные объекты проекта.
 // Здесь только объявления, реальные определения лежат в app_globals.cpp.
 extern WiFiUDP udp;
+extern WiFiUDP heartbeatUdp;
 extern WiFiServer tcpServer;
 extern WiFiClient tcpClient;
 extern QueueHandle_t uartQueue;

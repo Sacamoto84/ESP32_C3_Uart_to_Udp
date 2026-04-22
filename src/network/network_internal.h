@@ -9,6 +9,7 @@
 
 // Общие сетевые константы проекта.
 constexpr uint16_t kNetworkDataPort = 8888;
+constexpr uint16_t kHeartbeatPort = 8888;
 constexpr uint32_t kTcpWriteTimeoutMs = 3000;
 
 // Один элемент очереди между UART и сетью.
@@ -27,6 +28,7 @@ void pollTcpServer();
 void disconnectTcpClient(const char *reason);
 bool refreshTcpClientConnectionState(const char *disconnectReason);
 bool sendTcpChunk(const uint8_t *payload, size_t len);
+void handleHeartbeatUdp();
 
 #if PROJECT_HAS_SCREEN
 void drawStartupVersionFooter();

@@ -14,6 +14,7 @@ void loop()
     tickOTA();
     sett.tick();
     db.tick();
+    handleHeartbeatUdp();
 
 #if PROJECT_HAS_SCREEN
     // Локальный экран состояния обновляем не каждый цикл,
