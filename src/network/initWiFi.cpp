@@ -9,9 +9,9 @@ bool loadStaticIpConfig(IPAddress &localIp, IPAddress &gateway, IPAddress &subne
     String gatewayString = db.get(kk::staticGateway);
     String subnetString = db.get(kk::staticSubnet);
 
-    bool ok = localIp.fromString(localIpString) &&
-              gateway.fromString(gatewayString) &&
-              subnet.fromString(subnetString);
+    const bool ok = localIp.fromString(localIpString) &&
+                    gateway.fromString(gatewayString) &&
+                    subnet.fromString(subnetString);
 
     if (!ok)
     {
@@ -20,16 +20,70 @@ bool loadStaticIpConfig(IPAddress &localIp, IPAddress &gateway, IPAddress &subne
 
     return ok;
 }
+
+#if PROJECT_HAS_SCREEN
+constexpr const uint8_t *kStartupDisplayFont = u8g2_font_7x13_tr;
+
+void beginStartupScreenFrame()
+{
+    display.clearBuffer();
+    display.setDrawColor(1);
+    display.setFontMode(1);
+    display.setFont(kStartupDisplayFont);
+    display.setFontPosTop();
+}
+
+void drawDotProgress(uint8_t y, int count)
+{
+    if (count <= 0)
+    {
+        return;
+    }
+
+    display.setCursor(0, y);
+    for (int i = 0; i < count && i < 20; ++i)
+    {
+        display.print('.');
+    }
+}
+
+void renderWiFiStartupScreen(const char *title, const char *subtitle, int dots, const char *message)
+{
+    beginStartupScreenFrame();
+
+    if (title != nullptr && title[0] != '\0')
+    {
+        display.setCursor(0, 0);
+        display.print(title);
+    }
+
+    if (subtitle != nullptr && subtitle[0] != '\0')
+    {
+        display.setCursor(0, 12);
+        display.print(subtitle);
+    }
+
+    drawDotProgress(24, dots);
+
+    if (message != nullptr && message[0] != '\0')
+    {
+        display.setCursor(0, 36);
+        display.print(message);
+    }
+
+    drawStartupVersionFooter();
+    display.sendBuffer();
+}
+#endif
 } // namespace
 
-// Функция инициализации WiFi.
 void initWiFi()
 {
     int count = 0;
     bool needAP = false;
 
-    // Снижаем частоту CPU перед запуском WiFi.
-    setCpuFrequencyMhz(80); // вместо 160 MHz
+    // Lower CPU clock before Wi-Fi start to reduce peak power draw.
+    setCpuFrequencyMhz(80);
 
     WiFi.mode(WIFI_STA);
 
@@ -57,42 +111,26 @@ void initWiFi()
         }
     }
 
-    // От слабого к сильному сигналу:
-    // WIFI_POWER_MINUS_1dBm    // ~2 dBm   (~80 мА пик)
-    // WIFI_POWER_2dBm          // ~5 dBm   (~100 мА пик)
-    // WIFI_POWER_8_5dBm        // ~8.5 dBm (~150 мА пик) <- вы сейчас тут
-    // WIFI_POWER_11dBm         // ~11 dBm  (~200 мА пик) <- попробуйте это
-    // WIFI_POWER_13dBm         // ~13 dBm  (~250 мА пик)
-    // WIFI_POWER_15dBm         // ~15 dBm  (~300 мА пик)
-    // WIFI_POWER_17dBm         // ~17 dBm  (~350 мА пик)
-    // WIFI_POWER_19dBm         // ~19 dBm  (~420 мА пик)
-    // WIFI_POWER_19_5dBm       // ~20 dBm  (~480 мА пик) <- максимум
-
-    // КРИТИЧНО: снижаем мощность TX,
-    // это заметно уменьшает пиковое потребление при старте радиомодуля.
-    int power = db.get(kk::wifiPower);
+    // Tx power comes from settings and can later be lowered to 8.5 dBm on retry.
+    const int power = db.get(kk::wifiPower);
     WiFi.setTxPower((wifi_power_t)power);
     WiFi.begin(db.get(kk::WIFI_SSID), db.get(kk::WIFI_PASS));
     sendStatusLedCommand(StatusLedCommand::ConnectingToStation);
 
 #if PROJECT_HAS_SCREEN
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0, 0);
-    display.cp437(true);
-    display.clearDisplay();
-    display.print("Connecting ");
-    display.println(WifiCurrentPowerString(WiFi.getTxPower()));
-    drawStartupVersionFooter();
-    display.display();
+    {
+        const String powerLabel = WifiCurrentPowerString(WiFi.getTxPower());
+        renderWiFiStartupScreen("Connecting", powerLabel.c_str(), 0, nullptr);
+    }
 #endif
 
     while (WiFi.status() != WL_CONNECTED)
     {
 #if PROJECT_HAS_SCREEN
-        display.print(".");
-        drawStartupVersionFooter();
-        display.display();
+        {
+            const String powerLabel = WifiCurrentPowerString(WiFi.getTxPower());
+            renderWiFiStartupScreen("Connecting", powerLabel.c_str(), count + 1, nullptr);
+        }
 #endif
         Serial.print(db.get(kk::wifiPower));
         Serial.print(".");
@@ -104,14 +142,11 @@ void initWiFi()
             continue;
         }
 
-        // Сеть не найдена.
 #if PROJECT_HAS_SCREEN
-        display.println("\nSet Power to 8.5 dBm");
-        drawStartupVersionFooter();
-        display.display();
+        renderWiFiStartupScreen("Connecting", "8.5 dBm", 0, "Retry power");
 #endif
-        Serial.println("\nWifi STA не найдена");
-        Serial.println("Снижаем мощность до 8.5dBm");
+        Serial.println("\nWifi STA not found");
+        Serial.println("Lowering power to 8.5dBm");
 
         WiFi.setTxPower(WIFI_POWER_8_5dBm);
         WiFi.begin(db.get(kk::WIFI_SSID), db.get(kk::WIFI_PASS));
@@ -120,9 +155,7 @@ void initWiFi()
         while (WiFi.status() != WL_CONNECTED)
         {
 #if PROJECT_HAS_SCREEN
-            display.print(".");
-            drawStartupVersionFooter();
-            display.display();
+            renderWiFiStartupScreen("Connecting", "8.5 dBm", count + 1, "Retry power");
 #endif
             Serial.print(".");
             delay(500);
@@ -133,8 +166,7 @@ void initWiFi()
                 continue;
             }
 
-            // Сеть не найдена, включаем fallback в режим точки доступа.
-            Serial.println("Wifi STA не найдена");
+            Serial.println("Wifi STA not found");
             needAP = true;
             break;
         }
@@ -142,15 +174,12 @@ void initWiFi()
         break;
     }
 
-    // Создаём точку доступа.
     if (needAP)
     {
 #if PROJECT_HAS_SCREEN
-        display.println("\nStart APmode");
-        drawStartupVersionFooter();
-        display.display();
+        renderWiFiStartupScreen("Starting AP", "AP ESP32", 0, nullptr);
 #endif
-        Serial.println("Запуск точки доступа");
+        Serial.println("Starting access point");
         WiFi.mode(WIFI_AP);
         WiFi.softAP("AP ESP32");
         sendStatusLedCommand(StatusLedCommand::AccessPoint);
@@ -171,9 +200,10 @@ void initWiFi()
     }
 
 #if PROJECT_HAS_SCREEN
-    display.println("\nConnected");
-    drawStartupVersionFooter();
-    display.display();
+    {
+        const String connectedHost = (needAP ? WiFi.softAPIP() : WiFi.localIP()).toString();
+        renderWiFiStartupScreen("Connected", connectedHost.c_str(), 0, nullptr);
+    }
 #endif
 
     Serial.println();

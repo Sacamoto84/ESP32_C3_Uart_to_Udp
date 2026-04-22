@@ -33,8 +33,7 @@
 #if PROJECT_HAS_SCREEN
 #include <SPI.h>
 #include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+#include <U8g2lib.h>
 #endif
 #include "mString.h"
 #include <GyverDBFile.h>
@@ -86,6 +85,20 @@
 #define STATUS_LED_ACTIVE_LOW_DEFAULT 1
 #else
 #error "Unsupported hardware variant. Add a build flag for the target board."
+#endif
+
+#if PROJECT_HAS_SCREEN
+#if OLED_USE_I2C
+using OledDisplay = U8G2_SSD1306_128X64_NONAME_F_HW_I2C;
+#else
+using OledDisplay = U8G2_SSD1306_128X64_NONAME_F_4W_HW_SPI;
+#endif
+
+#if OLED_RESET_PIN < 0
+#define OLED_RESET_U8G2_PIN U8X8_PIN_NONE
+#else
+#define OLED_RESET_U8G2_PIN OLED_RESET_PIN
+#endif
 #endif
 
 #if defined(PROJECT_BOARD_LED_ACTIVE_LOW)

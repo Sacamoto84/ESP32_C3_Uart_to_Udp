@@ -2,17 +2,26 @@
 
 #if PROJECT_HAS_SCREEN
 
-// На стартовом экране снизу всегда показываем версию прошивки.
+namespace
+{
+constexpr const uint8_t *kFooterFont = u8g2_font_6x10_tr;
+constexpr uint8_t kFooterY = SCREEN_HEIGHT - 10;
+}
+
+// Draw firmware version at the bottom of the startup screen.
+// This helper is intended to be called as the last drawing step before sendBuffer().
 void drawStartupVersionFooter()
 {
-    int16_t cursorX = display.getCursorX();
-    int16_t cursorY = display.getCursorY();
+    display.setDrawColor(0);
+    display.drawBox(0, kFooterY, SCREEN_WIDTH, SCREEN_HEIGHT - kFooterY);
 
-    display.fillRect(0, SCREEN_HEIGHT - 8, SCREEN_WIDTH, 8, SSD1306_BLACK);
-    display.setCursor(0, SCREEN_HEIGHT - 8);
+    display.setDrawColor(1);
+    display.setFont(kFooterFont);
+    display.setFontMode(1);
+    display.setFontPosTop();
+    display.setCursor(0, kFooterY);
     display.print("v");
     display.print(FW_VERSION);
-    display.setCursor(cursorX, cursorY);
 }
 
 #endif

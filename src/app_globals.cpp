@@ -19,9 +19,8 @@ SettingsGyver sett("My Settings", &db);
 // Конфигурация дисплея зависит от варианта железа.
 #if PROJECT_HAS_SCREEN
 #if OLED_USE_I2C
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET_PIN);
+OledDisplay display(U8G2_R0, OLED_RESET_U8G2_PIN);
 #else
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT,
-                         OLED_MOSI_PIN, OLED_CLK_PIN, OLED_DC_PIN, OLED_RESET_PIN, OLED_CS_PIN);
+OledDisplay display(U8G2_R0, OLED_CS_PIN, OLED_DC_PIN, OLED_RESET_U8G2_PIN);
 #endif
 #endif

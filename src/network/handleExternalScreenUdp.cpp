@@ -1,36 +1,39 @@
 #include "network_internal.h"
 
-// Обработка входящих UDP-пакетов для внешнего экрана.
-// Ожидаем ровно 1024 байта - это размер framebuffer для SSD1306 128x64.
+namespace
+{
+constexpr int kExternalScreenFrameSize = SCREEN_WIDTH * SCREEN_HEIGHT / 8;
+}
+
+// Receive raw SSD1306 framebuffer over UDP and copy it directly into the full u8g2 buffer.
 void handleExternalScreenUdp()
 {
 #if !PROJECT_HAS_SCREEN
     return;
 #else
-    int packetSize = udp.parsePacket();
+    const int packetSize = udp.parsePacket();
     if (!packetSize)
     {
         return;
     }
 
     Serial.printf("UDP packet received: size %d from %s\n", packetSize, udp.remoteIP().toString().c_str());
-    if (packetSize == 1024)
+    if (packetSize == kExternalScreenFrameSize)
     {
-        int bytesRead = udp.read(display.getBuffer(), 1024);
-        if (bytesRead == 1024)
+        const int bytesRead = udp.read(display.getBufferPtr(), kExternalScreenFrameSize);
+        if (bytesRead == kExternalScreenFrameSize)
         {
-            display.display();
-            Serial.println("Display updated with 1024 bytes");
+            display.sendBuffer();
+            Serial.println("Display updated with raw framebuffer");
         }
         else
         {
-            Serial.printf("Error: read only %d bytes, expected 1024\n", bytesRead);
+            Serial.printf("Error: read only %d bytes, expected %d\n", bytesRead, kExternalScreenFrameSize);
         }
         return;
     }
 
-    // Очистка буфера, если пакет некорректного размера.
-    Serial.printf("Error: packet size %d bytes, expected 1024\n", packetSize);
+    Serial.printf("Error: packet size %d bytes, expected %d\n", packetSize, kExternalScreenFrameSize);
 
     int discarded = 0;
     while (udp.available())

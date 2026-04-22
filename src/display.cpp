@@ -3,12 +3,30 @@
 #include "app_globals.h"
 #include "network_bridge.h"
 
-// Яркость SSD1306 задаётся напрямую через регистр contrast.
+namespace
+{
+constexpr const uint8_t *kDisplayFont = u8g2_font_7x13_tr;
+constexpr uint8_t kStatusLine0Y = 0;
+constexpr uint8_t kStatusLine1Y = 13;
+constexpr uint8_t kStatusLine2Y = 26;
+constexpr uint8_t kStatusLine3Y = 39;
+constexpr uint8_t kStatusLine4Y = 52;
+
+void prepareTextFrame()
+{
+    display.clearBuffer();
+    display.setDrawColor(1);
+    display.setFontMode(1);
+    display.setFont(kDisplayFont);
+    display.setFontPosTop();
+}
+} // namespace
+
+// Яркость SSD1306 задаём напрямую через API u8g2.
 void applyDisplayBrightness(uint8_t brightness)
 {
 #if PROJECT_HAS_SCREEN
-    display.ssd1306_command(SSD1306_SETCONTRAST);
-    display.ssd1306_command(brightness);
+    display.setContrast(brightness);
 #else
     (void)brightness;
 #endif
@@ -25,18 +43,23 @@ void initDisplay()
 #else
 #if OLED_USE_I2C
     Wire.begin(OLED_SDA_PIN, OLED_SCL_PIN);
-    if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_I2C_ADDR))
+    display.setI2CAddress(static_cast<uint8_t>(OLED_I2C_ADDR << 1));
+    display.setBusClock(400000);
 #else
-    if (!display.begin(SSD1306_SWITCHCAPVCC))
+    SPI.begin(OLED_CLK_PIN, -1, OLED_MOSI_PIN, OLED_CS_PIN);
 #endif
+
+    if (!display.begin())
     {
-        Serial.println(F("SSD1306 allocation failed"));
+        Serial.println(F("u8g2 init failed"));
         for (;;)
-            ; // Don't proceed, loop forever
+            ;
     }
 
+    display.setPowerSave(0);
     applyDisplayBrightness((uint8_t)db.get(kk::screenBrightness));
-    display.display();
+    prepareTextFrame();
+    display.sendBuffer();
 #endif
 }
 
@@ -55,44 +78,42 @@ void screenLoop()
     const bool apMode = (wifiMode == WIFI_MODE_AP || wifiMode == WIFI_MODE_APSTA);
     const IPAddress ip = apMode ? WiFi.softAPIP() : WiFi.localIP();
 
-    display.clearDisplay();
-    display.setTextSize(1);
+    char line[48];
+    char rssiText[16];
 
-    display.setCursor(0, 2);
-    display.print("IP: ");
-    display.println(ip);
+    prepareTextFrame();
 
-    display.setCursor(0, 11);
+    std::snprintf(line, sizeof(line), "IP: %s", ip.toString().c_str());
+    display.setCursor(0, kStatusLine0Y);
+    display.print(line);
+
+    std::snprintf(rssiText, sizeof(rssiText), "%ld", rssi);
+    display.setCursor(SCREEN_WIDTH - display.getStrWidth(rssiText), kStatusLine0Y);
+    display.print(rssiText);
+
+    display.setCursor(0, kStatusLine1Y);
     display.print("TCP: ");
     display.print(isTcpClientConnected() ? "client on" : "wait client");
 
-    display.setCursor(0, 20);
-    display.print("Bitrate: ");
-    display.print(db.get(kk::Serial2Bitrate));
+    std::snprintf(line, sizeof(line), "Bitrate: %ld", (long)db.get(kk::Serial2Bitrate));
+    display.setCursor(0, kStatusLine2Y);
+    display.print(line);
 
-    //display.setCursor(0, 29);
-    //display.print(db.get(kk::echo) ? "Echo: True" : "Echo: False");
-    display.setTextSize(2);
-    display.setCursor(0, 29);
-    display.print("Drop: ");
-    display.print(getDroppedNetworkTxBytes());
+    std::snprintf(line, sizeof(line), "Drop: %lu", (unsigned long)getDroppedNetworkTxBytes());
+    display.setCursor(0, kStatusLine3Y);
+    display.print(line);
 
-    
-    display.setCursor(0, 48);
+    display.setCursor(0, kStatusLine4Y);
     if (getNetworkTxQueueCapacity() == 0)
     {
         display.print("Q ERR");
     }
     else
     {
-        display.print("TX:");
-        display.print(eeprom.all_TX_to_network);
+        std::snprintf(line, sizeof(line), "TX:%d", eeprom.all_TX_to_network);
+        display.print(line);
     }
 
-    display.setTextSize(1);
-    display.setCursor(104, 0);
-    display.println(rssi);
-
-    display.display();
+    display.sendBuffer();
 #endif
 }

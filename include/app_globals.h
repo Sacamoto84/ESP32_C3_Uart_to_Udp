@@ -16,5 +16,5 @@ extern volatile bool tcpClientConnected;
 extern volatile uint32_t droppedNetworkTxBytes;
 extern volatile uint32_t actualNetworkTxQueueLength;
 #if PROJECT_HAS_SCREEN
-extern Adafruit_SSD1306 display;
+extern OledDisplay display;
 #endif
