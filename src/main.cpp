@@ -39,13 +39,13 @@ void loop()
         screenLoop();
 
 
-        Serial.printf(
-        "psramSize=%u, freePsram=%u, maxPsramBlock=%u, freeHeap=%u\n",
-        ESP.getPsramSize(),
-        ESP.getFreePsram(),
-        ESP.getMaxAllocPsram(),
-        ESP.getFreeHeap()
-    );
+    //     Serial.printf(
+    //     "psramSize=%u, freePsram=%u, maxPsramBlock=%u, freeHeap=%u\n",
+    //     ESP.getPsramSize(),
+    //     ESP.getFreePsram(),
+    //     ESP.getMaxAllocPsram(),
+    //     ESP.getFreeHeap()
+    // );
 
     }
 #endif

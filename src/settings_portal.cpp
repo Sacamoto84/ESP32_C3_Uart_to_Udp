@@ -9,78 +9,78 @@
 
 namespace
 {
-// Набор кнопок выбора фиксированной мощности Wi-Fi.
-struct WifiPowerOption
-{
-    int dbValue;
-    const char *label;
-};
-
-constexpr WifiPowerOption kWifiPowerOptions[] = {
-    {-4, "-1dbm (-4)"},
-    {8, "2dBm (8)"},
-    {34, "8.5dBm (34)"},
-    {44, "11dBm (44)"},
-    {52, "13dBm (52)"},
-    {60, "15dBm (60)"},
-    {68, "17dBm (68)"},
-    {76, "19dBm (76)"},
-    {78, "19.5dBm (78)"},
-};
-
-// Подсвечиваем только активную мощность, чтобы в меню было легко ориентироваться.
-void addWifiPowerButton(sets::Builder &b, size_t id, const WifiPowerOption &option, int currentPower)
-{
-    const uint32_t color = (currentPower != option.dbValue) ? 0x808080 : 0xd55f30;
-    if (b.Button(id, option.label, color))
+    // Набор кнопок выбора фиксированной мощности Wi-Fi.
+    struct WifiPowerOption
     {
-        Serial.print("Set TX power to ");
-        Serial.println(option.label);
-        db.set(kk::wifiPower, option.dbValue);
+        int dbValue;
+        const char *label;
+    };
+
+    constexpr WifiPowerOption kWifiPowerOptions[] = {
+        {-4, "-1dbm (-4)"},
+        {8, "2dBm (8)"},
+        {34, "8.5dBm (34)"},
+        {44, "11dBm (44)"},
+        {52, "13dBm (52)"},
+        {60, "15dBm (60)"},
+        {68, "17dBm (68)"},
+        {76, "19dBm (76)"},
+        {78, "19.5dBm (78)"},
+    };
+
+    // Подсвечиваем только активную мощность, чтобы в меню было легко ориентироваться.
+    void addWifiPowerButton(sets::Builder &b, size_t id, const WifiPowerOption &option, int currentPower)
+    {
+        const uint32_t color = (currentPower != option.dbValue) ? 0x808080 : 0xd55f30;
+        if (b.Button(id, option.label, color))
+        {
+            Serial.print("Set TX power to ");
+            Serial.println(option.label);
+            db.set(kk::wifiPower, option.dbValue);
+            db.update();
+            WiFi.setTxPower((wifi_power_t)option.dbValue);
+            b.reload();
+        }
+    }
+
+    // Простая проверка IPv4 перед сохранением в БД.
+    bool isValidIp(const char *ip)
+    {
+        struct in_addr addr;
+        return inet_aton(ip, &addr);
+    }
+
+    // Унифицированная обработка IP-полей для static IP режима.
+    template <typename TKey>
+    void handleIpInput(sets::Builder &b, TKey key, const char *label)
+    {
+        String tempValue = db.get(key);
+        if (!b.Input(label, &tempValue))
+        {
+            return;
+        }
+
+        const char *ip = b.build.value.c_str();
+        if (!isValidIp(ip))
+        {
+            Serial.printf("Invalid IP for %s: %s\n", label, ip);
+            sett.reload(true);
+            return;
+        }
+
+        Serial.printf("Saved %s: %s\n", label, ip);
+        db.set(key, ip);
         db.update();
-        WiFi.setTxPower((wifi_power_t)option.dbValue);
-        b.reload();
-    }
-}
-
-// Простая проверка IPv4 перед сохранением в БД.
-bool isValidIp(const char *ip)
-{
-    struct in_addr addr;
-    return inet_aton(ip, &addr);
-}
-
-// Унифицированная обработка IP-полей для static IP режима.
-template <typename TKey>
-void handleIpInput(sets::Builder &b, TKey key, const char *label)
-{
-    String tempValue = db.get(key);
-    if (!b.Input(label, &tempValue))
-    {
-        return;
-    }
-
-    const char *ip = b.build.value.c_str();
-    if (!isValidIp(ip))
-    {
-        Serial.printf("Invalid IP for %s: %s\n", label, ip);
         sett.reload(true);
-        return;
     }
 
-    Serial.printf("Saved %s: %s\n", label, ip);
-    db.set(key, ip);
-    db.update();
-    sett.reload(true);
-}
-
-// В STA показываем обычный IP, в AP - адрес точки доступа.
-IPAddress currentPortalIp()
-{
-    const wifi_mode_t wifiMode = WiFi.getMode();
-    const bool apMode = (wifiMode == WIFI_MODE_AP || wifiMode == WIFI_MODE_APSTA);
-    return apMode ? WiFi.softAPIP() : WiFi.localIP();
-}
+    // В STA показываем обычный IP, в AP - адрес точки доступа.
+    IPAddress currentPortalIp()
+    {
+        const wifi_mode_t wifiMode = WiFi.getMode();
+        const bool apMode = (wifiMode == WIFI_MODE_AP || wifiMode == WIFI_MODE_APSTA);
+        return apMode ? WiFi.softAPIP() : WiFi.localIP();
+    }
 } // namespace
 
 void initSettings()
@@ -105,17 +105,15 @@ void build(sets::Builder &b)
     }
 #endif
 
-    b.Number(kk::Serial2Bitrate, "Битрейт", nullptr, 300, 4000000);
-
-    const String currentIpLabel = "ESP32 IP: " + currentPortalIp().toString();
-    b.Label(currentIpLabel.c_str());
-    const String otaLabel = "OTA: " + String(PROJECT_DEVICE_HOSTNAME) + ".local:" + String(PROJECT_OTA_PORT);
-    b.Label(otaLabel.c_str());
-    b.Label(PROJECT_OTA_PASSWORD_VALUE[0] ? "OTA auth: enabled" : "OTA auth: disabled");
-
     {
-        b.Label("Режим транспорта: TCP server");
-        b.Label("Android подключается к этому ESP32 как TCP client");
+        sets::Group g(b, "Статус");
+
+        const String currentIpLabel = "ESP32 IP: " + currentPortalIp().toString();
+        b.Label(currentIpLabel.c_str());
+        const String otaLabel = "OTA: " + String(PROJECT_DEVICE_HOSTNAME) + ".local:" + String(PROJECT_OTA_PORT);
+        b.Label(otaLabel.c_str());
+        b.Label(PROJECT_OTA_PASSWORD_VALUE[0] ? "OTA auth: enabled" : "OTA auth: disabled");
+
         b.Label("Порт TCP сервера: 8888");
 
         String queueLabel = "Очередь UART->TCP: " + String(getNetworkTxQueueCapacity()) +
@@ -123,37 +121,46 @@ void build(sets::Builder &b)
         b.Label(queueLabel.c_str());
         if (getNetworkTxQueueCapacity() == 0)
         {
-            b.Label("Очередь не создалась, проверьте лог и уменьшите размеры буферов");
+            b.Paragraph("", Text("Очередь не создалась, проверьте лог и уменьшите размеры буферов"));
         }
         else
         {
-            b.Label("При переполнении новые данные дропаются без краша прошивки");
+            b.Paragraph("", Text("При переполнении новые данные дропаются без краша прошивки"));
         }
+
+        const String ram = "psramSize=" + String(ESP.getPsramSize()) + " freePsram=" + String(ESP.getFreePsram()) + "\nmaxPsramBlock=" + String(ESP.getMaxAllocPsram()) + " freeHeap=" + String(ESP.getFreeHeap());
+        b.Paragraph("", Text(ram));
     }
 
-    b.Switch(kk::echo, "Эхо");
+    {
+        sets::Group g(b, "Настройка");
+
+        b.Number(kk::Serial2Bitrate, "Битрейт", nullptr, 300, 4000000);
+
+        b.Switch(kk::echo, "Эхо");
 
 #if PROJECT_HAS_SCREEN
-    // Яркость задаётся напрямую в диапазоне 0..255,
-    // чтобы без преобразований писать значение в контроллер дисплея.
-    if (b.Number(kk::screenBrightness, "Яркость экрана", nullptr, 0, 255))
-    {
-        int brightness = constrain((int)db.get(kk::screenBrightness), 0, 255);
+        // Яркость задаётся напрямую в диапазоне 0..255,
+        // чтобы без преобразований писать значение в контроллер дисплея.
+        if (b.Number(kk::screenBrightness, "Яркость экрана", nullptr, 0, 255))
+        {
+            int brightness = constrain((int)db.get(kk::screenBrightness), 0, 255);
 
-        Serial.print("[Brightness] number callback, value: ");
-        Serial.println(brightness);
+            Serial.print("[Brightness] number callback, value: ");
+            Serial.println(brightness);
 
-        applyDisplayBrightness((uint8_t)brightness);
+            applyDisplayBrightness((uint8_t)brightness);
 
-        bool saved = db.update();
-        Serial.print("[Brightness] db.update result: ");
-        Serial.println(saved ? "true" : "false");
-        Serial.print("[Brightness] applied value: ");
-        Serial.println(brightness);
-        b.reload();
-        sett.reload(true);
-    }
+            bool saved = db.update();
+            Serial.print("[Brightness] db.update result: ");
+            Serial.println(saved ? "true" : "false");
+            Serial.print("[Brightness] applied value: ");
+            Serial.println(brightness);
+            b.reload();
+            sett.reload(true);
+        }
 #endif
+    }
 
     {
         // Блок Wi-Fi настроек: SSID/пароль и опциональный static IP.
