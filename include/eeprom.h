@@ -7,8 +7,10 @@
 
 extern GyverDBFile db;
 
-#if defined(PROJECT_NETWORK_TX_QUEUE_LENGTH)
-constexpr int kDefaultNetworkTxQueueLength = PROJECT_NETWORK_TX_QUEUE_LENGTH;
+#if defined(HW_VARIANT_ESP32_S2_MINI)
+constexpr int kDefaultNetworkTxQueueLength = 256;
+#elif defined(HW_VARIANT_ESP32_C3)
+constexpr int kDefaultNetworkTxQueueLength = 64;
 #else
 constexpr int kDefaultNetworkTxQueueLength = 32;
 #endif

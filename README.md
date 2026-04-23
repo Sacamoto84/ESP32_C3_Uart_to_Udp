@@ -210,7 +210,11 @@ struct NetworkTxChunk {
 Текущие compile-time размеры:
 
 - `PROJECT_NETWORK_TX_CHUNK_SIZE = 1460`
-- `PROJECT_NETWORK_TX_QUEUE_LENGTH` задаёт только первое значение по умолчанию в базе настроек
+
+Стартовое значение TX-очереди для новой базы настроек:
+
+- `64` чанка для `ESP32-C3`
+- `256` чанков для `ESP32-S2 Mini`
 - дальше размер TX-очереди меняется в web-портале и применяется после перезагрузки ESP32
 
 Дополнительно:
@@ -283,11 +287,7 @@ platformio run --environment lolin_s2_mini_ota --target upload
 
 ```text
 -DPROJECT_NETWORK_TX_CHUNK_SIZE=1460
--DPROJECT_NETWORK_TX_QUEUE_LENGTH=256
 ```
-
-`PROJECT_NETWORK_TX_QUEUE_LENGTH` теперь используется только как стартовое значение для новой базы настроек.
-После первого запуска размер TX-очереди меняется через web-портал.
 
 ### Подробный лог UART hot path
 

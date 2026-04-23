@@ -35,7 +35,7 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
-#define FW_VERSION "1.6.7"
+#define FW_VERSION "1.6.8"
 
 // Параметры платы и назначение пинов зависят от выбранного environment в PlatformIO.
 #if defined(HW_VARIANT_ESP32_S2_MINI)
@@ -89,12 +89,6 @@ using OledDisplay = U8G2_SSD1306_128X64_NONAME_F_4W_HW_SPI;
 #define NETWORK_TX_CHUNK_SIZE PROJECT_NETWORK_TX_CHUNK_SIZE
 #else
 #define NETWORK_TX_CHUNK_SIZE 1024
-#endif
-
-#if defined(PROJECT_NETWORK_TX_QUEUE_LENGTH)
-#define NETWORK_TX_QUEUE_LENGTH PROJECT_NETWORK_TX_QUEUE_LENGTH
-#else
-#define NETWORK_TX_QUEUE_LENGTH 32
 #endif
 
 // Подробный лог каждого успешно обработанного UART-пакета заметно нагружает горячий путь.
