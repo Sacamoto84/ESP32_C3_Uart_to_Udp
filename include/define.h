@@ -49,7 +49,7 @@
 #define SCREEN_WIDTH 128 // OLED display width, in pixels
 #define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
-#define FW_VERSION "1.6.3"
+#define FW_VERSION "1.6.7"
 
 // Параметры платы и назначение пинов зависят от выбранного environment в PlatformIO.
 #if defined(HW_VARIANT_ESP32_S2_MINI)

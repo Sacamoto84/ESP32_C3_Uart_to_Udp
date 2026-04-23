@@ -83,7 +83,7 @@ void screenLoop()
 
     prepareTextFrame();
 
-    std::snprintf(line, sizeof(line), "IP: %s", ip.toString().c_str());
+    std::snprintf(line, sizeof(line), "%s", ip.toString().c_str());
     display.setCursor(0, kStatusLine0Y);
     display.print(line);
 
@@ -95,7 +95,7 @@ void screenLoop()
     display.print("TCP: ");
     display.print(isTcpClientConnected() ? "client on" : "wait client");
 
-    std::snprintf(line, sizeof(line), "Bitrate: %ld", (long)db.get(kk::Serial2Bitrate));
+    std::snprintf(line, sizeof(line), "%ld bps", (long)db.get(kk::Serial2Bitrate));
     display.setCursor(0, kStatusLine2Y);
     display.print(line);
 
