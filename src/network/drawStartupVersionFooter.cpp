@@ -8,8 +8,7 @@ constexpr const uint8_t *kFooterFont = u8g2_font_6x10_tr;
 constexpr uint8_t kFooterY = SCREEN_HEIGHT - 10;
 }
 
-// Draw firmware version at the bottom of the startup screen.
-// This helper is intended to be called as the last drawing step before sendBuffer().
+// Рисует версию прошивки в нижней части стартового экрана.
 void drawStartupVersionFooter()
 {
     display.setDrawColor(0);

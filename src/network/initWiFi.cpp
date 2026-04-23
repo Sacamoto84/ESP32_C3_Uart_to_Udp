@@ -3,6 +3,7 @@
 
 namespace
 {
+// Загружает и проверяет сохранённые поля static IP перед запуском Wi-Fi.
 bool loadStaticIpConfig(IPAddress &localIp, IPAddress &gateway, IPAddress &subnet)
 {
     String localIpString = db.get(kk::staticIp);
@@ -24,6 +25,7 @@ bool loadStaticIpConfig(IPAddress &localIp, IPAddress &gateway, IPAddress &subne
 #if PROJECT_HAS_SCREEN
 constexpr const uint8_t *kStartupDisplayFont = u8g2_font_7x13_tr;
 
+// Сбрасывает стартовый экран в единое текстовое состояние рисования.
 void beginStartupScreenFrame()
 {
     display.clearBuffer();
@@ -33,6 +35,7 @@ void beginStartupScreenFrame()
     display.setFontPosTop();
 }
 
+// Рисует простую индикацию прогресса в виде точек.
 void drawDotProgress(uint8_t y, int count)
 {
     if (count <= 0)
@@ -47,6 +50,7 @@ void drawDotProgress(uint8_t y, int count)
     }
 }
 
+// Рисует один кадр стартового/прогресс-экрана во время подключения Wi-Fi.
 void renderWiFiStartupScreen(const char *title, const char *subtitle, int dots, const char *message)
 {
     beginStartupScreenFrame();
@@ -75,14 +79,15 @@ void renderWiFiStartupScreen(const char *title, const char *subtitle, int dots, 
     display.sendBuffer();
 }
 #endif
-} // namespace
+}
 
+// Подключается к Wi-Fi по сохранённым настройкам и при необходимости уходит в AP-режим.
 void initWiFi()
 {
     int count = 0;
     bool needAP = false;
 
-    // Lower CPU clock before Wi-Fi start to reduce peak power draw.
+    // Перед стартом Wi-Fi опускаем частоту CPU, чтобы уменьшить пик потребления.
     setCpuFrequencyMhz(80);
 
     WiFi.mode(WIFI_STA);
@@ -111,7 +116,7 @@ void initWiFi()
         }
     }
 
-    // Tx power comes from settings and can later be lowered to 8.5 dBm on retry.
+    // Мощность берём из настроек; позже можем понизить её до 8.5 dBm при ретрае.
     const int power = db.get(kk::wifiPower);
     WiFi.setTxPower((wifi_power_t)power);
     WiFi.begin(db.get(kk::WIFI_SSID), db.get(kk::WIFI_PASS));

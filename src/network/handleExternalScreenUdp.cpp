@@ -5,7 +5,7 @@ namespace
 constexpr int kExternalScreenFrameSize = SCREEN_WIDTH * SCREEN_HEIGHT / 8;
 }
 
-// Receive raw SSD1306 framebuffer over UDP and copy it directly into the full u8g2 buffer.
+// Принимает сырой буфер кадра SSD1306 по UDP и копирует его прямо в буфер OLED.
 void handleExternalScreenUdp()
 {
 #if !PROJECT_HAS_SCREEN

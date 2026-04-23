@@ -11,15 +11,9 @@ namespace
 {
 constexpr uint32_t kConnectingBlinkMs = 350;
 constexpr uint32_t kAccessPointBlinkMs = 120;
-// Длительность одной полуволны мигания LED при активности (on/off).
-// ~20 Гц — визуально похоже на activity-LED у RJ-45 разъёмов.
 constexpr uint32_t kActivityBlinkHalfMs = 25;
-// Сколько миллисекунд без активности держим LED в solid ON.
 constexpr uint32_t kActivityHoldMs = 120;
 constexpr uint8_t kStatusLedTaskCore = 0;
-// Приоритет выше loopTask (он запускается с приоритетом 1), чтобы мигалка
-// не замирала на время блокирующих операций главного цикла — например,
-// при I2C-пересылке фреймбуфера OLED раз в 2 с.
 constexpr UBaseType_t kStatusLedTaskPriority = 3;
 constexpr uint16_t kStatusLedTaskStack = 2048;
 constexpr uint8_t kStatusLedQueueLength = 8;
@@ -28,6 +22,7 @@ constexpr uint8_t kStatusLedPwmResolution = 8;
 constexpr uint32_t kStatusLedPwmMaxDuty = (1UL << kStatusLedPwmResolution) - 1;
 constexpr uint8_t kStatusLedPwmChannel = 0;
 
+// Выбирает физический драйвер светодиода для текущей платы.
 enum class StatusLedBackend : uint8_t
 {
     None = 0,
@@ -41,6 +36,7 @@ TaskHandle_t statusLedTaskHandle = nullptr;
 bool statusLedPwmReady = false;
 StatusLedBackend statusLedBackend = StatusLedBackend::None;
 
+// Изменяемое состояние, которым владеет фоновая LED-задача.
 struct StatusLedState
 {
     StatusLedCommand mode = StatusLedCommand::Off;
@@ -48,26 +44,31 @@ struct StatusLedState
     uint32_t lastActivityMs = 0;
 };
 
+// Читает из настроек, разрешена ли индикация светодиодом.
 bool isStatusLedEnabled()
 {
     return db.get(kk::statusLedEnabled);
 }
 
+// Читает полярность LED, чтобы одна и та же логика работала на платах с инверсной логикой.
 bool isStatusLedActiveLow()
 {
     return db.get(kk::statusLedActiveLow);
 }
 
+// Возвращает уровень GPIO, который включает светодиод при текущей полярности.
 uint8_t statusLedOnLevel()
 {
     return isStatusLedActiveLow() ? LOW : HIGH;
 }
 
+// Возвращает уровень GPIO, который выключает светодиод при текущей полярности.
 uint8_t statusLedOffLevel()
 {
     return isStatusLedActiveLow() ? HIGH : LOW;
 }
 
+// Ограничивает сохранённую яркость допустимым PWM-диапазоном.
 uint32_t getConfiguredStatusLedBrightness()
 {
     const int brightness = db.get(kk::statusLedBrightness);
@@ -85,6 +86,7 @@ uint32_t getConfiguredStatusLedBrightness()
     return (uint32_t)brightness;
 }
 
+// Преобразует сохранённую яркость в коэффициент заполнения для состояния "включено".
 uint32_t statusLedOnDuty()
 {
     const uint32_t brightness = getConfiguredStatusLedBrightness();
@@ -92,6 +94,7 @@ uint32_t statusLedOnDuty()
     return (brightness > kStatusLedPwmMaxDuty) ? kStatusLedPwmMaxDuty : brightness;
 }
 
+// Переводит логическое включение и выключение в реальное PWM-значение с учётом инверсной логики.
 uint32_t statusLedRawDuty(bool enabled)
 {
     const uint32_t onDuty = statusLedOnDuty();
@@ -104,6 +107,7 @@ uint32_t statusLedRawDuty(bool enabled)
     return enabled ? onDuty : 0;
 }
 
+// Применяет нужное состояние LED через активный драйвер.
 void writeStatusLed(bool enabled)
 {
     const bool outputEnabled = enabled && isStatusLedEnabled();
@@ -141,6 +145,7 @@ void writeStatusLed(bool enabled)
     }
 }
 
+// Определяет и инициализирует лучший доступный драйвер светодиода для этой платы.
 bool initStatusLedBackend()
 {
 #if defined(HW_VARIANT_ESP32_C3)
@@ -166,16 +171,19 @@ bool initStatusLedBackend()
 #endif
 }
 
+// Возвращает период мигания для выбранного режима LED.
 uint32_t currentBlinkPeriod(StatusLedCommand mode)
 {
     return (mode == StatusLedCommand::AccessPoint) ? kAccessPointBlinkMs : kConnectingBlinkMs;
 }
 
+// Проверяет, считается ли последнее сетевое событие ещё "свежим".
 bool activityRecent(const StatusLedState &state, uint32_t now)
 {
     return state.lastActivityMs && (now - state.lastActivityMs) < kActivityHoldMs;
 }
 
+// Отрисовывает текущее логическое состояние на физическом светодиоде.
 void applyStatusLedState(const StatusLedState &state)
 {
     const uint32_t now = millis();
@@ -196,10 +204,8 @@ void applyStatusLedState(const StatusLedState &state)
         break;
 
     case StatusLedCommand::ClientConnected:
-        // Нет активности — ровно горит. Есть активность — мигаем с фиксированной
-        // частотой. Фазу берём напрямую из millis(), чтобы она не зависела
-        // от того, как часто срабатывает таймаут очереди (при непрерывном
-        // потоке она вообще не срабатывает).
+        // Без трафика светодиод горит ровно. При активности мигает с фиксированной
+        // частотой от millis(), чтобы фаза не зависела от того, как часто будится задача.
         if (activityRecent(state, now))
         {
             const bool phase = ((now / kActivityBlinkHalfMs) & 1u) != 0;
@@ -218,6 +224,7 @@ void applyStatusLedState(const StatusLedState &state)
     }
 }
 
+// Применяет входящую LED-команду к локальному состоянию LED-задачи.
 void handleStatusLedCommand(StatusLedState &state, StatusLedCommand command)
 {
     switch (command)
@@ -233,8 +240,8 @@ void handleStatusLedCommand(StatusLedState &state, StatusLedCommand command)
         break;
 
     case StatusLedCommand::PulseNetworkActivity:
-        // Только отмечаем факт активности; саму мигалку крутит периодический
-        // таймаут задачи, чтобы мигание было видно при любом темпе событий.
+        // Здесь только отмечаем факт недавней активности. Само мигание обслуживается
+        // периодическим таймаутом, чтобы оно было видно даже при бурсте событий.
         if (state.mode == StatusLedCommand::ClientConnected)
         {
             state.lastActivityMs = millis();
@@ -246,6 +253,7 @@ void handleStatusLedCommand(StatusLedState &state, StatusLedCommand command)
     }
 }
 
+// Считает, сколько задача LED может спать до следующего перехода состояния.
 TickType_t statusLedWaitTicks(const StatusLedState &state)
 {
     switch (state.mode)
@@ -259,14 +267,10 @@ TickType_t statusLedWaitTicks(const StatusLedState &state)
         const uint32_t now = millis();
         if (activityRecent(state, now))
         {
-            // Пока активность считается «свежей» — просыпаемся на каждую
-            // полуволну, чтобы инвертировать activityBlink.
             return pdMS_TO_TICKS(kActivityBlinkHalfMs);
         }
         if (state.lastActivityMs)
         {
-            // Активность была, но уже устарела: просыпаемся ровно ко времени
-            // возврата в solid ON, а дальше — спим до новой команды.
             const uint32_t elapsed = now - state.lastActivityMs;
             if (elapsed >= kActivityHoldMs)
             {
@@ -286,6 +290,7 @@ TickType_t statusLedWaitTicks(const StatusLedState &state)
     }
 }
 
+// Продвигает внутренние таймеры мигания и активности по таймауту ожидания очереди.
 void onStatusLedTimeout(StatusLedState &state)
 {
     switch (state.mode)
@@ -296,8 +301,8 @@ void onStatusLedTimeout(StatusLedState &state)
         break;
 
     case StatusLedCommand::ClientConnected:
-        // Сама фаза мигания считается из millis() в applyStatusLedState,
-        // здесь только сбрасываем метку, если активность устарела.
+        // Сама фаза мигания считается от millis() в applyStatusLedState.
+        // Здесь только убираем устаревшую отметку активности после истечения окна удержания.
         if (state.lastActivityMs && !activityRecent(state, millis()))
         {
             state.lastActivityMs = 0;
@@ -313,6 +318,7 @@ void onStatusLedTimeout(StatusLedState &state)
     }
 }
 
+// Владеет всей машиной состояний светодиода и реагирует на команды и таймауты.
 void statusLedTask(void *arg)
 {
     (void)arg;
@@ -337,8 +343,9 @@ void statusLedTask(void *arg)
         applyStatusLedState(state);
     }
 }
-} // namespace
+}
 
+// Создаёт очередь и задачу, через которые дальше управляется весь LED.
 void initStatusLed()
 {
     EEPROM::getInstance();
@@ -395,6 +402,7 @@ void initStatusLed()
     Serial.println("Status LED ready");
 }
 
+// Добавляет команду в очередь LED и схлопывает переполнение для непульсовых команд.
 void sendStatusLedCommand(StatusLedCommand command)
 {
     if (!statusLedQueue)

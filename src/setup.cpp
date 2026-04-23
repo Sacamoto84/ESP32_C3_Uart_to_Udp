@@ -1,5 +1,6 @@
 #include "display.h"
 #include "hardware.h"
+#include "command_cli.h"
 #include "network_bridge.h"
 #include "settings_portal.h"
 #include "status_led.h"
@@ -8,9 +9,8 @@
 #include <esp_heap_caps.h>
 #include "esp32-hal-psram.h"
 
-// Порядок важен:
-// сначала базовое железо и FS, потом дисплей и сеть, и только после этого
-// стартуем портал настроек и UART-задачу.
+// Порядок запуска здесь важен: сначала поднимаем низкоуровневые сервисы,
+// потом сеть и интерфейс, и только после этого задачи, которые зависят от инициализации стека.
 void setup()
 {
     initPins();
@@ -19,6 +19,7 @@ void setup()
     initDisplay();
     initWiFi();
     initSettings();
+    initCommandCli();
     initTcpServer();
     initUDP();
     initMdns();

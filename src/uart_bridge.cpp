@@ -9,6 +9,7 @@ constexpr int kBytesPerKb = 1024;
 constexpr int kUartTxBufferSize = 256;
 constexpr int kUartEventQueueLength = 100;
 
+// Снимок памяти для логирования нагрузки на RAM при выборе размера UART RX-буфера.
 struct MemorySnapshot
 {
     uint32_t heapSize;
@@ -19,10 +20,10 @@ struct MemorySnapshot
     uint32_t maxPsramBlock;
 };
 
-// Локальный буфер чтения из драйвера UART.
-// Дальше данные уже дробятся на сетевые чанки фиксированного размера.
+// Локальный буфер чтения UART перед тем, как данные разрежутся на сетевые чанки.
 char uartDataBuffer[NETWORK_TX_CHUNK_SIZE * 4];
 
+// Считывает текущее состояние кучи и PSRAM для диагностики.
 MemorySnapshot captureMemorySnapshot()
 {
     return {
@@ -34,11 +35,13 @@ MemorySnapshot captureMemorySnapshot()
         ESP.getMaxAllocPsram()};
 }
 
+// Возвращает знаковую разницу между двумя счётчиками памяти для удобного лога.
 long getMemoryDelta(uint32_t before, uint32_t after)
 {
     return (long)after - (long)before;
 }
 
+// Пишет в лог состояние памяти до попытки аллокации UART-драйвера.
 void logUartMemorySnapshot(const char *stage, int bufferKb, const MemorySnapshot &snapshot)
 {
     Serial.printf("UART RX alloc %s %d KB: heap=%u/%u maxHeapBlock=%u psram=%u/%u maxPsramBlock=%u\n",
@@ -52,6 +55,7 @@ void logUartMemorySnapshot(const char *stage, int bufferKb, const MemorySnapshot
                   (unsigned)snapshot.maxPsramBlock);
 }
 
+// Логирует, как изменилась память после очередной попытки аллокации UART-драйвера.
 void logUartMemoryDelta(int bufferKb,
                         esp_err_t result,
                         const MemorySnapshot &before,
@@ -70,6 +74,7 @@ void logUartMemoryDelta(int bufferKb,
                   getMemoryDelta(before.maxPsramBlock, after.maxPsramBlock));
 }
 
+// Читает и ограничивает настроенный размер UART RX-буфера в килобайтах.
 int getConfiguredSerialRxBufferKb()
 {
     const int configuredKb = db.get(kk::serialRxBufferKb);
@@ -87,6 +92,7 @@ int getConfiguredSerialRxBufferKb()
     return configuredKb;
 }
 
+// Пытается запустить UART-драйвер с заданным RX-буфером, уменьшая его при нехватке памяти.
 int installUartDriverBestEffort()
 {
     int bufferKb = getConfiguredSerialRxBufferKb();
@@ -134,13 +140,11 @@ int installUartDriverBestEffort()
 
     return 0;
 }
-} // namespace
+}
 
-// Инициализация UART.
+// Настраивает UART0 и запускает задачу, которая мостит UART RX в TCP 8888.
 void initUART()
 {
-    // При необходимости мощность Wi-Fi можно поднять отдельно:
-    // WiFi.setTxPower(WIFI_POWER_19_5dBm);
     uart_config_t config = {
         .baud_rate = db.get(kk::Serial2Bitrate),
         .data_bits = UART_DATA_8_BITS,
@@ -183,9 +187,7 @@ void initUART()
     enqueueNetworkTxData((const uint8_t *)banner, strlen(banner));
 }
 
-// Фоновая задача чтения UART и постановки данных в ограниченную сетевую очередь.
-// Такой разрыв между UART и TCP нужен, чтобы медленная сеть не блокировала чтение UART
-// и не приводила к крашу или разрастанию буферов.
+// Обрабатывает события UART, читает входящие байты и ставит их в сетевую очередь.
 void uartTask(void *arg)
 {
     (void)arg;
@@ -213,8 +215,8 @@ void uartTask(void *arg)
             continue;
         }
 
-        // Читаем не больше локального буфера и оставляем байт под завершающий ноль,
-        // но реально ставим его только когда включен echo-лог.
+        // Ограничиваем чтение размером локального буфера и оставляем один байт
+        // под завершающий ноль, если включён echo-лог.
         const size_t maxRead = (event.size < sizeof(uartDataBuffer) - 1) ? event.size : sizeof(uartDataBuffer) - 1;
         int available = uart_read_bytes(UART_NUM_0, uartDataBuffer, maxRead, 0);
 
@@ -235,8 +237,8 @@ void uartTask(void *arg)
         {
             uartDataBuffer[available] = '\0';
 
-            // Echo оставлен как и раньше, чтобы можно было глазами посмотреть,
-            // что уходит из UART в транспортный слой.
+            // Оставляем читаемую копию в Serial-логе, чтобы можно было глазами
+            // увидеть, что именно уходит из UART в транспортный слой.
             Serial.println("NET_tx echo:");
             Serial.println(uartDataBuffer);
         }

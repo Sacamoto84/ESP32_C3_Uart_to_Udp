@@ -4,12 +4,14 @@
 
 namespace
 {
+// Преобразует текущий OTA-тип операции в читаемую строку для лога.
 const char *otaCommandName()
 {
     return (ArduinoOTA.getCommand() == U_FLASH) ? "firmware" : "filesystem";
 }
-} // namespace
+}
 
+// Настраивает ArduinoOTA и гарантирует закрытие активных TCP-клиентов во время обновления.
 void initOTA()
 {
     static bool initialized = false;

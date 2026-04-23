@@ -6,7 +6,8 @@
 
 Актуальная схема работы такая:
 
-- ESP32 поднимает `TCP server` на порту `8888`
+- ESP32 поднимает `TCP server` на порту `8888` для потока `UART -> Android`
+- ESP32 поднимает `TCP server` на порту `8900` для команд `Android -> ESP32 SimpleCLI`
 - Android сам подключается к ESP32 как `TCP client`
 - `UDP` только для двух служебных задач:
   - heartbeat `ping/pong` на порту `8888`
@@ -32,6 +33,7 @@
 
 ```text
 UART -> очередь -> TCP server:8888 -> Android TCP client
+Android TCP client -> TCP server:8900 -> SimpleCLI
 ```
 
 
@@ -68,6 +70,7 @@ tm3 hb pong seq=123
 ### Порты
 
 - `TCP 8888` - основной сервер UART -> Android
+- `TCP 8900` - прием команд Android -> `SimpleCLI`
 - `UDP 8888` - heartbeat `ping/pong`
 - `UDP 82` - внешний экран OLED framebuffer, если включен
 - `TCP 80` - web-портал настроек
@@ -320,9 +323,10 @@ platformio run --environment lolin_s2_mini_ota --target upload
 Android-приложение работает с этой прошивкой по такой схеме:
 
 1. Android определяет IP ESP32 автоматически или берет его из ручной настройки.
-2. Android открывает `TCP` соединение на `8888`.
-3. Параллельно Android шлет heartbeat `ping` по `UDP 8888`.
-4. Если heartbeat пропадает, Android считает сервер потерянным, роняет TCP-сокет и пытается переподключиться.
+2. Android открывает постоянное `TCP` соединение на `8888` для чтения UART.
+3. Android шлет команды `SimpleCLI` в `TCP 8900` по схеме `connect -> send -> close`.
+4. Параллельно Android шлет heartbeat `ping` по `UDP 8888`.
+5. Если heartbeat пропадает, Android считает сервер потерянным, роняет TCP-сокет и пытается переподключиться.
 
 Это позволяет отдельно контролировать жив ли сервер, даже если TCP еще не успел сам отвалиться по таймаутам ОС.
 

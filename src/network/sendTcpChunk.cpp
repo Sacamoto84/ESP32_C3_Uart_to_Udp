@@ -1,6 +1,7 @@
 #include "network_internal.h"
 #include "status_led.h"
 
+// Пишет один чанк из очереди UART в активного TCP-клиента с защитой по таймауту.
 bool sendTcpChunk(const uint8_t *payload, size_t len)
 {
     if (payload == nullptr || len == 0)

@@ -1,5 +1,6 @@
 #include "network_internal.h"
 
+// Возвращает текущую заполненность очереди UART->TCP.
 uint32_t getQueuedNetworkTxChunks()
 {
     if (networkTxQueue == nullptr)

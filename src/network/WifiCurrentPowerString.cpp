@@ -2,7 +2,7 @@
 
 namespace
 {
-// Таблица для красивого отображения текущей мощности Wi-Fi.
+// Таблица отображения текущей мощности Wi-Fi в читаемую строку.
 struct WifiPowerLabel
 {
     int dbValue;
@@ -23,8 +23,9 @@ constexpr WifiPowerLabel kWifiPowerLabels[] = {
     {WIFI_POWER_19dBm, "19 dBm"},
     {WIFI_POWER_19_5dBm, "19.5 dBm"},
 };
-} // namespace
+}
 
+// Преобразует текущий код мощности в строку, которую можно показать в интерфейсе и логах.
 String WifiCurrentPowerString(int power)
 {
     Serial.print("Current TX Power code: ");

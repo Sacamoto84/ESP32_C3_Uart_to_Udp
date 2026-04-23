@@ -2,13 +2,15 @@
 
 namespace
 {
+// Копирует диапазон байтов в один элемент очереди FreeRTOS.
 static void IRAM_ATTR fillNetworkTxChunk(NetworkTxChunk &chunk, const uint8_t *src, size_t len)
 {
     chunk.len = (uint16_t)len;
     memcpy(chunk.data, src, len);
 }
-} // namespace
+}
 
+// Разбивает произвольный буфер UART на чанки размера очереди и ставит в неё сколько получится.
 size_t IRAM_ATTR enqueueNetworkTxData(const uint8_t *data, size_t len)
 {
     static uint32_t lastOverflowLogAt = 0;

@@ -1,5 +1,6 @@
 #include "network_internal.h"
 
+// Постоянно принимает потоковых клиентов и отправляет им чанки из UART-очереди.
 void networkTxTask(void *arg)
 {
     (void)arg;

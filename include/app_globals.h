@@ -2,12 +2,13 @@
 
 #include "define.h"
 
-// Общие глобальные объекты проекта.
-// Здесь только объявления, реальные определения лежат в app_globals.cpp.
+// Общие глобальные объекты проекта, которые создаются один раз в app_globals.cpp.
 extern WiFiUDP udp;
 extern WiFiUDP heartbeatUdp;
 extern WiFiServer tcpServer;
 extern WiFiClient tcpClient;
+extern WiFiServer tcpCommandServer;
+extern WiFiClient tcpCommandClient;
 extern QueueHandle_t uartQueue;
 extern QueueHandle_t networkTxQueue;
 extern GyverDBFile db;

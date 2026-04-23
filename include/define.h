@@ -8,7 +8,7 @@
 
 #include <SettingsGyver.h>
 
-// Для безэкранной сборки добавьте флаг:
+// Для сборки без локального OLED-экрана добавьте:
 // -DPROJECT_NO_SCREEN=1
 #if defined(PROJECT_NO_SCREEN)
 #define PROJECT_HAS_SCREEN 0
@@ -32,12 +32,12 @@
 #include "driver/gpio.h"
 #include "driver/uart.h"
 
-#define SCREEN_WIDTH 128 // OLED display width, in pixels
-#define SCREEN_HEIGHT 64 // OLED display height, in pixels
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
 
 #define FW_VERSION "1.6.8"
 
-// Параметры платы и назначение пинов зависят от выбранного environment в PlatformIO.
+// Назначение пинов зависит от выбранного окружения PlatformIO и варианта платы.
 #if defined(HW_VARIANT_ESP32_S2_MINI)
 #define BOARD_LABEL "ESP32-S2 Mini"
 #define OLED_USE_I2C 1
@@ -47,11 +47,11 @@
 #define OLED_RESET_PIN -1
 #define UART_TX_PIN 5
 #define UART_RX_PIN 3
-#define BOOT_HIGH_PIN 36                 // VCC для OLED
-#define BOOT_LOW_PIN 38                  // GND для OLED
+#define BOOT_HIGH_PIN 36
+#define BOOT_LOW_PIN 38
 #define AP_MODE_PIN -1
-#define RESET_PULSE_PIN 9                // Пин для сброса открытый коллектор
-#define STATUS_LED_BOARD_PIN 15          // Светодиод на плате
+#define RESET_PULSE_PIN 9
+#define STATUS_LED_BOARD_PIN 15
 #elif defined(HW_VARIANT_ESP32_C3)
 #define BOARD_LABEL "ESP32-C3"
 #define OLED_USE_I2C 0
@@ -85,14 +85,14 @@ using OledDisplay = U8G2_SSD1306_128X64_NONAME_F_4W_HW_SPI;
 #endif
 #endif
 
+// Размер одного чанка в очереди UART->TCP.
 #if defined(PROJECT_NETWORK_TX_CHUNK_SIZE)
 #define NETWORK_TX_CHUNK_SIZE PROJECT_NETWORK_TX_CHUNK_SIZE
 #else
 #define NETWORK_TX_CHUNK_SIZE 1024
 #endif
 
-// Подробный лог каждого успешно обработанного UART-пакета заметно нагружает горячий путь.
-// Включайте только для отладки:
+// Подробный лог по каждому UART-пакету включается флагом:
 // -DPROJECT_UART_VERBOSE_LOG=1
 #if defined(PROJECT_UART_VERBOSE_LOG)
 #define PROJECT_UART_VERBOSE_LOG_ENABLED 1
@@ -100,15 +100,14 @@ using OledDisplay = U8G2_SSD1306_128X64_NONAME_F_4W_HW_SPI;
 #define PROJECT_UART_VERBOSE_LOG_ENABLED 0
 #endif
 
-// Wait for the USB serial monitor at boot so early diagnostics are visible.
-// Override with -DPROJECT_BOOT_SERIAL_DELAY_MS=0 to disable.
+// Даёт время USB Serial Monitor подключиться на старте, чтобы не потерять ранние логи.
+// Отключается через -DPROJECT_BOOT_SERIAL_DELAY_MS=0
 #if defined(PROJECT_BOOT_SERIAL_DELAY_MS)
 #define BOOT_SERIAL_DELAY_MS PROJECT_BOOT_SERIAL_DELAY_MS
 #else
 #define BOOT_SERIAL_DELAY_MS 5000
 #endif
 
-// Значения по умолчанию для Wi-Fi.
 #define PROJECT_OTA_PORT 3232
 
 #if defined(PROJECT_OTA_HOSTNAME)

@@ -30,12 +30,7 @@ constexpr bool kDefaultStatusLedActiveLow = true;
 constexpr bool kDefaultStatusLedActiveLow = false;
 #endif
 
-// База данных для хранения настроек.
-// GyverDBFile сам сохраняет изменения в файл при update().
-
-// Имена ячеек базы данных.
-// ipClient, broadcast и useTcpTransport оставлены как legacy-ключи,
-// чтобы старые базы настроек спокойно открывались после обновления прошивки.
+// Ключи базы GyverDB. Legacy-ключи оставлены, чтобы старые базы продолжали открываться.
 DB_KEYS(
     kk,
     ipClient,
@@ -61,15 +56,14 @@ DB_KEYS(
     statusLedEnabled,
     statusLedActiveLow);
 
-// Получаем единственный экземпляр:
-// EEPROM& settings = EEPROM::getInstance();
+// Небольшой одиночный хелпер, который гарантирует однократную инициализацию БД настроек.
 class EEPROM
 {
 public:
     int all_TX_to_network = 0;
     int all_RX_from_network = 0;
 
-    // Единственный способ получить экземпляр.
+    // Возвращает единственный экземпляр EEPROM-хелпера, используемый прошивкой.
     static EEPROM &getInstance()
     {
         static EEPROM instance;
@@ -77,19 +71,14 @@ public:
     }
 
 private:
-    // Запрет копирования.
     EEPROM(const EEPROM &) = delete;
     EEPROM &operator=(const EEPROM &) = delete;
 
-    // Приватный конструктор: экземпляр нельзя создать извне.
+    // Заполняет базу начальными значениями, если нужных ключей ещё нет.
     EEPROM()
     {
-        // Инициализация по умолчанию, аналог init-блока в Kotlin:
-        // запускаем БД и создаём все поля, если их ещё нет.
         db.begin();
 
-        // Создаёт ячейку соответствующего типа и записывает начальные данные,
-        // если такой ячейки ещё нет в БД.
         db.init(kk::ipClient, "192.168.0.100");
         db.init(kk::echo, true);
         db.init(kk::timeout, 1000);

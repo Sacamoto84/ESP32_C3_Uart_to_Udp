@@ -29,7 +29,7 @@ namespace
         {78, "19.5dBm (78)"},
     };
 
-    // Подсвечиваем только активную мощность, чтобы в меню было легко ориентироваться.
+    // Рисует одну кнопку мощности Wi-Fi и сразу применяет пресет при нажатии.
     void addWifiPowerButton(sets::Builder &b, size_t id, const WifiPowerOption &option, int currentPower)
     {
         const uint32_t color = (currentPower != option.dbValue) ? 0x808080 : 0xd55f30;
@@ -44,14 +44,14 @@ namespace
         }
     }
 
-    // Простая проверка IPv4 перед сохранением в БД.
+    // Проверяет IPv4-строку перед сохранением в БД настроек.
     bool isValidIp(const char *ip)
     {
         struct in_addr addr;
         return inet_aton(ip, &addr);
     }
 
-    // Унифицированная обработка IP-полей для static IP режима.
+    // Общий обработчик полей static IP с валидацией и перезагрузкой страницы.
     template <typename TKey>
     void handleIpInput(sets::Builder &b, TKey key, const char *label)
     {
@@ -75,24 +75,23 @@ namespace
         sett.reload(true);
     }
 
-    // В STA показываем обычный IP, в AP - адрес точки доступа.
+    // Возвращает IP, который должен отображаться в портале для текущего Wi-Fi режима.
     IPAddress currentPortalIp()
     {
         const wifi_mode_t wifiMode = WiFi.getMode();
         const bool apMode = (wifiMode == WIFI_MODE_AP || wifiMode == WIFI_MODE_APSTA);
         return apMode ? WiFi.softAPIP() : WiFi.localIP();
     }
-} // namespace
+}
 
+// Запускает портал настроек и привязывает обработчик построения интерфейса.
 void initSettings()
 {
-    // Инициализируем веб-портал настроек и привязываем callback,
-    // который полностью строит интерфейс страницы.
     sett.begin(true);
     sett.onBuild(build);
 }
 
-// Здесь описан весь UI настроек проекта.
+// Полностью перестраивает интерфейс SettingsGyver для текущего запроса.
 void build(sets::Builder &b)
 {
     Serial.println("build");
@@ -252,7 +251,7 @@ void build(sets::Builder &b)
         digitalWrite(RESET_PULSE_PIN, HIGH);
     }
 
-    // Полная очистка БД настроек.
+    // Полная очистка базы настроек.
     if (b.Button("Очистка базы", 0x25b18f))
     {
         Serial.println("Очистка базы");

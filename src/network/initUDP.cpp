@@ -1,8 +1,6 @@
 #include "network_internal.h"
 
-// Инициализация UDP:
-// - heartbeat/ping-pong всегда слушаем на 8888
-// - UDP внешнего экрана на 82 поднимаем только когда экран действительно есть
+// Поднимает UDP-порты для heartbeat и, при наличии экрана, для внешнего потока кадров.
 void initUDP()
 {
     heartbeatUdp.begin(kHeartbeatPort);

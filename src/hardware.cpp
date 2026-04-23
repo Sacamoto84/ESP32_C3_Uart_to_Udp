@@ -2,6 +2,7 @@
 
 namespace
 {
+// Даёт USB Serial Monitor короткое окно на подключение, чтобы ранние логи не потерялись.
 void waitForBootSerialMonitor()
 {
 #if BOOT_SERIAL_DELAY_MS > 0
@@ -27,11 +28,9 @@ void waitForBootSerialMonitor()
                   Serial ? "yes" : "no");
 #endif
 }
-} // namespace
+}
 
-// Инициализация служебных пинов платы.
-// Для ESP32-S2 Mini здесь удерживаются уровни на boot-линиях,
-// для ESP32-C3 подготавливаются линии, используемые проектом.
+// Выставляет безопасные начальные режимы пинов для текущего варианта платы.
 void initPins()
 {
 #if defined(HW_VARIANT_ESP32_S2_MINI)
@@ -59,8 +58,7 @@ void initPins()
 #endif
 }
 
-// Последовательный порт нужен почти всем подсистемам,
-// а файловая система LittleFS используется для БД настроек.
+// Запускает логирование и монтирует LittleFS, где лежит база настроек.
 void initSerialAndFS()
 {
     Serial.begin(460800);

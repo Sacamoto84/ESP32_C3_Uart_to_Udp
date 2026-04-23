@@ -10,9 +10,7 @@ constexpr char kHeartbeatPongPrefix[] = "tm3 hb pong";
 constexpr size_t kHeartbeatBufferSize = 128;
 }
 
-// Явный heartbeat по UDP:
-// Android шлёт `tm3 hb ping seq=N` на UDP 8888,
-// ESP32 отвечает `tm3 hb pong seq=N` обратно на IP/порт отправителя.
+// Отвечает на UDP-пакеты `tm3 hb ping` зеркальным ответом `tm3 hb pong`.
 void handleHeartbeatUdp()
 {
     int packetSize = heartbeatUdp.parsePacket();

@@ -1,6 +1,7 @@
 #include "network_internal.h"
 #include "status_led.h"
 
+// Принимает основного клиента TCP 8888 и отклоняет параллельные лишние подключения.
 void pollTcpServer()
 {
     refreshTcpClientConnectionState("pollTcpServer: TCP client disconnected");

@@ -2,6 +2,7 @@
 
 #include <ESPmDNS.h>
 
+// Публикует устройство в локальной сети, чтобы к нему можно было обращаться по `<host>.local`.
 void initMdns()
 {
     static bool initialized = false;

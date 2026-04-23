@@ -11,6 +11,7 @@ StaticQueue_t *gNetworkTxQueueStruct = nullptr;
 uint8_t *gNetworkTxQueueStorage = nullptr;
 bool gNetworkTxQueueUsesPsram = false;
 
+// Освобождает буферы очереди, выделенные предыдущими попытками создания.
 void releaseStaticQueueBuffers()
 {
     if (gNetworkTxQueueStorage != nullptr)
@@ -26,6 +27,7 @@ void releaseStaticQueueBuffers()
     }
 }
 
+// Пытается разместить очередь UART->TCP в PSRAM, чтобы лучше переживать всплески трафика.
 bool tryCreateNetworkQueueInPsram(uint32_t queueLength)
 {
     if (!psramFound())
@@ -65,6 +67,7 @@ bool tryCreateNetworkQueueInPsram(uint32_t queueLength)
     return true;
 }
 
+// Запасной вариант: обычная очередь FreeRTOS во внутренней RAM.
 bool tryCreateNetworkQueueInInternalRam(uint32_t queueLength)
 {
     releaseStaticQueueBuffers();
@@ -73,6 +76,7 @@ bool tryCreateNetworkQueueInInternalRam(uint32_t queueLength)
     return networkTxQueue != nullptr;
 }
 
+// Читает и ограничивает длину очереди, заданную в настройках.
 uint32_t getConfiguredNetworkTxQueueLength()
 {
     const int configuredLength = db.get(kk::networkTxQueueLength);
@@ -90,9 +94,7 @@ uint32_t getConfiguredNetworkTxQueueLength()
     return (uint32_t)configuredLength;
 }
 
-// Пытаемся создать максимально большую очередь для burst-трафика UART.
-// Если памяти не хватает, автоматически откатываемся на более короткую очередь,
-    // чтобы TCP server всё равно поднялся и устройство не осталось без порта 8888.
+// Создаёт максимально большую очередь UART->TCP, которую тянет доступная память.
 uint32_t createBestEffortNetworkQueue()
 {
     uint32_t queueLength = getConfiguredNetworkTxQueueLength();
@@ -132,8 +134,9 @@ uint32_t createBestEffortNetworkQueue()
     gNetworkTxQueueUsesPsram = false;
     return 0;
 }
-} // namespace
+}
 
+// Запускает оба TCP-сервера и связанные с ними фоновые задачи.
 void initTcpServer()
 {
     static bool initialized = false;
@@ -152,23 +155,28 @@ void initTcpServer()
                   (unsigned)ESP.getFreePsram(),
                   (unsigned)ESP.getMaxAllocPsram());
 
-    // TCP server поднимаем даже если очередь не удалось создать.
-    // В таком случае подключение к 8888 всё равно будет видно,
-    // а в логах станет понятно, что проблема именно в буферах.
+    // Поднимаем серверы даже если очередь не создалась, чтобы устройство всё равно
+    // было видно по сети, а проблема с буферами читалась в логах.
     tcpServer.begin(kTcpServerPort);
     tcpServer.setNoDelay(true);
+    tcpCommandServer.begin(kTcpCommandPort);
+    tcpCommandServer.setNoDelay(true);
 
     xTaskCreate(networkTxTask, "networkTxTask", 6144, nullptr, 1, nullptr);
+    xTaskCreate(networkRxTask, "networkRxTask", 6144, nullptr, 1, nullptr);
     initialized = true;
 
     if (actualNetworkTxQueueLength == 0)
     {
-        Serial.printf("TCP server started on port %u without TX queue\n", kTcpServerPort);
+        Serial.printf("TCP servers started: stream=%u cmd=%u without TX queue\n",
+                      kTcpServerPort,
+                      kTcpCommandPort);
         return;
     }
 
-    Serial.printf("TCP server started on port %u, queue %u x %u bytes, storage=%s\n",
+    Serial.printf("TCP servers started: stream=%u cmd=%u, queue %u x %u bytes, storage=%s\n",
                   kTcpServerPort,
+                  kTcpCommandPort,
                   (unsigned)actualNetworkTxQueueLength,
                   (unsigned)NETWORK_TX_CHUNK_SIZE,
                   gNetworkTxQueueUsesPsram ? "PSRAM" : "internal RAM");

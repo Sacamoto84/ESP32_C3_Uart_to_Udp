@@ -12,6 +12,7 @@ constexpr uint8_t kStatusLine2Y = 26;
 constexpr uint8_t kStatusLine3Y = 39;
 constexpr uint8_t kStatusLine4Y = 52;
 
+// Сбрасывает общие параметры рисования текста перед выводом нового кадра состояния.
 void prepareTextFrame()
 {
     display.clearBuffer();
@@ -20,9 +21,9 @@ void prepareTextFrame()
     display.setFont(kDisplayFont);
     display.setFontPosTop();
 }
-} // namespace
+}
 
-// Яркость SSD1306 задаём напрямую через API u8g2.
+// Применяет сохранённую яркость напрямую через API контраста u8g2.
 void applyDisplayBrightness(uint8_t brightness)
 {
 #if PROJECT_HAS_SCREEN
@@ -32,10 +33,10 @@ void applyDisplayBrightness(uint8_t brightness)
 #endif
 }
 
+// Инициализирует шину, драйвер OLED и первый пустой кадр.
 void initDisplay()
 {
-    // Инициализируем singleton с настройками заранее,
-    // чтобы сразу применить сохранённую яркость экрана.
+    // Убеждаемся, что база настроек уже поднята, прежде чем читать яркость экрана.
     EEPROM::getInstance();
 
 #if !PROJECT_HAS_SCREEN
@@ -63,8 +64,7 @@ void initDisplay()
 #endif
 }
 
-// Локальный экран состояния показывается,
-// когда внешний экран по UDP отключён.
+// Рисует встроенный экран состояния, который показывается при отключённом внешнем экране.
 void screenLoop()
 {
 #if !PROJECT_HAS_SCREEN
@@ -72,7 +72,7 @@ void screenLoop()
 #else
     EEPROM &eeprom = EEPROM::getInstance();
 
-    // В STA показываем локальный IP, в AP - адрес точки доступа.
+    // В режиме STA показываем IP станции, а в режиме AP — адрес точки доступа.
     const long rssi = WiFi.RSSI();
     const wifi_mode_t wifiMode = WiFi.getMode();
     const bool apMode = (wifiMode == WIFI_MODE_AP || wifiMode == WIFI_MODE_APSTA);
