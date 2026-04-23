@@ -87,7 +87,7 @@ void initSettings()
 {
     // Инициализируем веб-портал настроек и привязываем callback,
     // который полностью строит интерфейс страницы.
-    sett.begin(true, "esp");
+    sett.begin(true);
     sett.onBuild(build);
 }
 

@@ -22,18 +22,6 @@ void initMdns()
     MDNS.addServiceTxt("http", "tcp", "path", "/");
     MDNS.addServiceTxt("http", "tcp", "board", BOARD_LABEL);
 
-    MDNS.addService("uartbridge", "tcp", kTcpServerPort);
-    MDNS.addServiceTxt("uartbridge", "tcp", "transport", "tcp-server");
-    MDNS.addServiceTxt("uartbridge", "tcp", "board", BOARD_LABEL);
-
-#if PROJECT_HAS_SCREEN
-    if (db.get(kk::externalScreen))
-    {
-        MDNS.addService("external-screen", "udp", 82);
-        MDNS.addServiceTxt("external-screen", "udp", "role", "oled-framebuffer");
-    }
-#endif
-
     initialized = true;
     Serial.printf("mDNS ready: %s.local\n", PROJECT_DEVICE_HOSTNAME);
 }
