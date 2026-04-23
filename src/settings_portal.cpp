@@ -162,7 +162,20 @@ void build(sets::Builder &b)
 
         b.Switch(kk::echo, "Эхо");
 
-#if PROJECT_HAS_BOARD_LED
+        if (b.Switch(kk::statusLedEnabled, "LED включен"))
+        {
+            db.update();
+            sendStatusLedCommand(StatusLedCommand::RefreshBrightness);
+            b.reload();
+        }
+
+        if (b.Switch(kk::statusLedActiveLow, "LED active LOW"))
+        {
+            db.update();
+            sendStatusLedCommand(StatusLedCommand::RefreshBrightness);
+            b.reload();
+        }
+
         if (b.Number(kk::statusLedBrightness,
                      "Яркость LED",
                      nullptr,
@@ -173,7 +186,6 @@ void build(sets::Builder &b)
             sendStatusLedCommand(StatusLedCommand::RefreshBrightness);
             b.reload();
         }
-#endif
 
 #if PROJECT_HAS_SCREEN
         // Яркость задаётся напрямую в диапазоне 0..255,

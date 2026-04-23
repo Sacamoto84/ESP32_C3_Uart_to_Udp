@@ -19,6 +19,14 @@ constexpr int kSerialRxBufferMaxKb = 256;
 constexpr int kDefaultStatusLedBrightness = 255;
 constexpr int kStatusLedBrightnessMin = 0;
 constexpr int kStatusLedBrightnessMax = 255;
+constexpr bool kDefaultStatusLedEnabled = true;
+#if defined(HW_VARIANT_ESP32_S2_MINI)
+constexpr bool kDefaultStatusLedActiveLow = false;
+#elif defined(HW_VARIANT_ESP32_C3)
+constexpr bool kDefaultStatusLedActiveLow = true;
+#else
+constexpr bool kDefaultStatusLedActiveLow = false;
+#endif
 
 // База данных для хранения настроек.
 // GyverDBFile сам сохраняет изменения в файл при update().
@@ -47,7 +55,9 @@ DB_KEYS(
     screenBrightness,
     networkTxQueueLength,
     serialRxBufferKb,
-    statusLedBrightness);
+    statusLedBrightness,
+    statusLedEnabled,
+    statusLedActiveLow);
 
 // Получаем единственный экземпляр:
 // EEPROM& settings = EEPROM::getInstance();
@@ -95,6 +105,8 @@ private:
         db.init(kk::networkTxQueueLength, kDefaultNetworkTxQueueLength);
         db.init(kk::serialRxBufferKb, kDefaultSerialRxBufferKb);
         db.init(kk::statusLedBrightness, kDefaultStatusLedBrightness);
+        db.init(kk::statusLedEnabled, kDefaultStatusLedEnabled);
+        db.init(kk::statusLedActiveLow, kDefaultStatusLedActiveLow);
     }
 };
 

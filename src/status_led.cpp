@@ -9,7 +9,6 @@
 
 namespace
 {
-#if PROJECT_HAS_BOARD_LED
 constexpr uint32_t kConnectingBlinkMs = 350;
 constexpr uint32_t kAccessPointBlinkMs = 120;
 // Длительность одной полуволны мигания LED при активности (on/off).
@@ -49,14 +48,24 @@ struct StatusLedState
     uint32_t lastActivityMs = 0;
 };
 
+bool isStatusLedEnabled()
+{
+    return db.get(kk::statusLedEnabled);
+}
+
+bool isStatusLedActiveLow()
+{
+    return db.get(kk::statusLedActiveLow);
+}
+
 uint8_t statusLedOnLevel()
 {
-    return STATUS_LED_ACTIVE_LOW ? LOW : HIGH;
+    return isStatusLedActiveLow() ? LOW : HIGH;
 }
 
 uint8_t statusLedOffLevel()
 {
-    return STATUS_LED_ACTIVE_LOW ? HIGH : LOW;
+    return isStatusLedActiveLow() ? HIGH : LOW;
 }
 
 uint32_t getConfiguredStatusLedBrightness()
@@ -87,7 +96,7 @@ uint32_t statusLedRawDuty(bool enabled)
 {
     const uint32_t onDuty = statusLedOnDuty();
 
-    if (STATUS_LED_ACTIVE_LOW)
+    if (isStatusLedActiveLow())
     {
         return enabled ? (kStatusLedPwmMaxDuty - onDuty) : kStatusLedPwmMaxDuty;
     }
@@ -97,12 +106,14 @@ uint32_t statusLedRawDuty(bool enabled)
 
 void writeStatusLed(bool enabled)
 {
+    const bool outputEnabled = enabled && isStatusLedEnabled();
+
     switch (statusLedBackend)
     {
     case StatusLedBackend::NeoPixel:
 #if defined(HW_VARIANT_ESP32_C3)
     {
-        const uint8_t level = enabled ? static_cast<uint8_t>(statusLedOnDuty()) : 0;
+        const uint8_t level = outputEnabled ? static_cast<uint8_t>(statusLedOnDuty()) : 0;
         neopixelWrite(STATUS_LED_BOARD_PIN, level, level, level);
         break;
     }
@@ -113,13 +124,13 @@ void writeStatusLed(bool enabled)
     case StatusLedBackend::PwmGpio:
         if (statusLedPwmReady)
         {
-            ledcWrite(kStatusLedPwmChannel, statusLedRawDuty(enabled));
+            ledcWrite(kStatusLedPwmChannel, statusLedRawDuty(outputEnabled));
         }
         break;
 
     case StatusLedBackend::DigitalGpio:
     {
-        const bool effectiveEnabled = enabled && statusLedOnDuty() > 0;
+        const bool effectiveEnabled = outputEnabled && statusLedOnDuty() > 0;
         digitalWrite(STATUS_LED_BOARD_PIN, effectiveEnabled ? statusLedOnLevel() : statusLedOffLevel());
         break;
     }
@@ -326,12 +337,10 @@ void statusLedTask(void *arg)
         applyStatusLedState(state);
     }
 }
-#endif
 } // namespace
 
 void initStatusLed()
 {
-#if PROJECT_HAS_BOARD_LED
     EEPROM::getInstance();
 
     if (statusLedQueue)
@@ -339,9 +348,10 @@ void initStatusLed()
         return;
     }
 
-    Serial.printf("Status LED init: pin=%u active_low=%u brightness=%u\n",
+    Serial.printf("Status LED init: pin=%u enabled=%u active_low=%u brightness=%u\n",
                   (unsigned)STATUS_LED_BOARD_PIN,
-                  (unsigned)STATUS_LED_ACTIVE_LOW,
+                  (unsigned)isStatusLedEnabled(),
+                  (unsigned)isStatusLedActiveLow(),
                   (unsigned)getConfiguredStatusLedBrightness());
 
     if (!initStatusLedBackend())
@@ -383,12 +393,10 @@ void initStatusLed()
     }
 
     Serial.println("Status LED ready");
-#endif
 }
 
 void sendStatusLedCommand(StatusLedCommand command)
 {
-#if PROJECT_HAS_BOARD_LED
     if (!statusLedQueue)
     {
         return;
@@ -400,7 +408,4 @@ void sendStatusLedCommand(StatusLedCommand command)
         xQueueReset(statusLedQueue);
         xQueueSendToBack(statusLedQueue, &command, 0);
     }
-#else
-    (void)command;
-#endif
 }

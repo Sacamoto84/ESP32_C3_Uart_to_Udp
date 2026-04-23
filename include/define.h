@@ -16,17 +16,6 @@
 #define PROJECT_HAS_SCREEN 1
 #endif
 
-// Для использования встроенного светодиода платы добавьте флаг:
-// -DPROJECT_USE_BOARD_LED=1
-#if defined(PROJECT_USE_BOARD_LED)
-#define PROJECT_HAS_BOARD_LED 1
-#else
-#define PROJECT_HAS_BOARD_LED 0
-#endif
-
-// Для переопределения полярности светодиода добавьте:
-// -DPROJECT_BOARD_LED_ACTIVE_LOW=1  -> LED светит при уровне LOW
-// -DPROJECT_BOARD_LED_ACTIVE_LOW=0  -> LED светит при уровне HIGH
 #if PROJECT_HAS_SCREEN
 #include <SPI.h>
 #include <Wire.h>
@@ -63,7 +52,6 @@
 #define AP_MODE_PIN -1
 #define RESET_PULSE_PIN 9                // Пин для сброса открытый коллектор
 #define STATUS_LED_BOARD_PIN 15          // Светодиод на плате
-#define STATUS_LED_ACTIVE_LOW_DEFAULT 0  // LOLIN S2 Mini built-in LED is high-active
 #elif defined(HW_VARIANT_ESP32_C3)
 #define BOARD_LABEL "ESP32-C3"
 #define OLED_USE_I2C 0
@@ -79,7 +67,6 @@
 #define AP_MODE_PIN 8
 #define RESET_PULSE_PIN 9
 #define STATUS_LED_BOARD_PIN 8
-#define STATUS_LED_ACTIVE_LOW_DEFAULT 1
 #else
 #error "Unsupported hardware variant. Add a build flag for the target board."
 #endif
@@ -96,12 +83,6 @@ using OledDisplay = U8G2_SSD1306_128X64_NONAME_F_4W_HW_SPI;
 #else
 #define OLED_RESET_U8G2_PIN OLED_RESET_PIN
 #endif
-#endif
-
-#if defined(PROJECT_BOARD_LED_ACTIVE_LOW)
-#define STATUS_LED_ACTIVE_LOW PROJECT_BOARD_LED_ACTIVE_LOW
-#else
-#define STATUS_LED_ACTIVE_LOW STATUS_LED_ACTIVE_LOW_DEFAULT
 #endif
 
 #if defined(PROJECT_NETWORK_TX_CHUNK_SIZE)

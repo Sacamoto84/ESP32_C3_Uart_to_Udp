@@ -179,11 +179,13 @@ RESET -> -1
 
 ### Полярность и яркость
 
-Полярность встроенного LED зависит от платы:
+LED считается доступным всегда:
 
-- `LOLIN S2 Mini` — обычный GPIO, LED **active HIGH** (`-DPROJECT_BOARD_LED_ACTIVE_LOW=0`).
+- `ESP32-C3` — RGB/NeoPixel на пине `8`
+- `LOLIN S2 Mini` — обычный GPIO на пине `15`, по умолчанию **active HIGH**
 
-Яркость задаётся в web-портале и хранится в базе настроек. По умолчанию используется полная яркость `255`.
+В web-портале настраиваются включение LED, полярность `active LOW` и яркость `0..255`.
+По умолчанию LED включён, яркость полная: `255`.
 
 ## Очередь UART -> TCP и PSRAM
 
@@ -230,7 +232,7 @@ struct NetworkTxChunk {
 - `static IP`, `gateway`, `subnet`
 - `echo`
 - мощность передатчика Wi-Fi
-- яркость встроенного LED, если LED включён в сборке
+- включение встроенного LED, полярность `active LOW` и яркость
 - яркость OLED, если экран есть
 - включение внешнего экрана по UDP `82`, если экран есть
 - перезагрузку ESP32
@@ -275,19 +277,6 @@ platformio run --environment lolin_s2_mini_ota --target upload
 
 ```text
 -DPROJECT_NO_SCREEN=1
-```
-
-### Использовать встроенный LED платы
-
-```text
--DPROJECT_USE_BOARD_LED=1
-```
-
-### Полярность LED
-
-```text
--DPROJECT_BOARD_LED_ACTIVE_LOW=1
--DPROJECT_BOARD_LED_ACTIVE_LOW=0
 ```
 
 ### Размеры сетевых буферов

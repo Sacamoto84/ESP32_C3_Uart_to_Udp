@@ -184,11 +184,7 @@ void initWiFi()
         WiFi.softAP("AP ESP32");
         sendStatusLedCommand(StatusLedCommand::AccessPoint);
 
-        if (AP_MODE_PIN >= 0
-#if PROJECT_HAS_BOARD_LED
-            && AP_MODE_PIN != STATUS_LED_BOARD_PIN
-#endif
-        )
+        if (AP_MODE_PIN >= 0 && AP_MODE_PIN != STATUS_LED_BOARD_PIN)
         {
             pinMode(AP_MODE_PIN, OUTPUT);
             digitalWrite(AP_MODE_PIN, LOW);

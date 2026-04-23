@@ -51,7 +51,7 @@ void initPins()
     pinMode(5, OUTPUT);
     pinMode(6, OUTPUT);
     pinMode(7, OUTPUT);
-#if !(PROJECT_HAS_BOARD_LED && (STATUS_LED_BOARD_PIN == 8))
+#if STATUS_LED_BOARD_PIN != 8
     pinMode(8, OUTPUT);
 #endif
     pinMode(9, OPEN_DRAIN);
