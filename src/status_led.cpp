@@ -59,9 +59,28 @@ uint8_t statusLedOffLevel()
     return STATUS_LED_ACTIVE_LOW ? HIGH : LOW;
 }
 
+uint32_t getConfiguredStatusLedBrightness()
+{
+    const int brightness = db.get(kk::statusLedBrightness);
+
+    if (brightness < kStatusLedBrightnessMin)
+    {
+        return kStatusLedBrightnessMin;
+    }
+
+    if (brightness > kStatusLedBrightnessMax)
+    {
+        return kStatusLedBrightnessMax;
+    }
+
+    return (uint32_t)brightness;
+}
+
 uint32_t statusLedOnDuty()
 {
-    return (STATUS_LED_BRIGHTNESS > kStatusLedPwmMaxDuty) ? kStatusLedPwmMaxDuty : STATUS_LED_BRIGHTNESS;
+    const uint32_t brightness = getConfiguredStatusLedBrightness();
+
+    return (brightness > kStatusLedPwmMaxDuty) ? kStatusLedPwmMaxDuty : brightness;
 }
 
 uint32_t statusLedRawDuty(bool enabled)
@@ -99,8 +118,11 @@ void writeStatusLed(bool enabled)
         break;
 
     case StatusLedBackend::DigitalGpio:
-        digitalWrite(STATUS_LED_BOARD_PIN, enabled ? statusLedOnLevel() : statusLedOffLevel());
+    {
+        const bool effectiveEnabled = enabled && statusLedOnDuty() > 0;
+        digitalWrite(STATUS_LED_BOARD_PIN, effectiveEnabled ? statusLedOnLevel() : statusLedOffLevel());
         break;
+    }
 
     case StatusLedBackend::None:
     default:
@@ -116,13 +138,6 @@ bool initStatusLedBackend()
     return true;
 #else
     pinMode(STATUS_LED_BOARD_PIN, OUTPUT);
-
-    if (STATUS_LED_BRIGHTNESS == 0 || STATUS_LED_BRIGHTNESS >= kStatusLedPwmMaxDuty)
-    {
-        statusLedBackend = StatusLedBackend::DigitalGpio;
-        writeStatusLed(false);
-        return true;
-    }
 
     if (ledcSetup(kStatusLedPwmChannel, kStatusLedPwmFreq, kStatusLedPwmResolution) == 0)
     {
@@ -186,6 +201,7 @@ void applyStatusLedState(const StatusLedState &state)
         break;
 
     case StatusLedCommand::PulseNetworkActivity:
+    case StatusLedCommand::RefreshBrightness:
         writeStatusLed(false);
         break;
     }
@@ -212,6 +228,9 @@ void handleStatusLedCommand(StatusLedState &state, StatusLedCommand command)
         {
             state.lastActivityMs = millis();
         }
+        break;
+
+    case StatusLedCommand::RefreshBrightness:
         break;
     }
 }
@@ -249,6 +268,7 @@ TickType_t statusLedWaitTicks(const StatusLedState &state)
 
     case StatusLedCommand::Off:
     case StatusLedCommand::PulseNetworkActivity:
+    case StatusLedCommand::RefreshBrightness:
     case StatusLedCommand::WaitingForClient:
     default:
         return portMAX_DELAY;
@@ -275,6 +295,7 @@ void onStatusLedTimeout(StatusLedState &state)
 
     case StatusLedCommand::Off:
     case StatusLedCommand::PulseNetworkActivity:
+    case StatusLedCommand::RefreshBrightness:
     case StatusLedCommand::WaitingForClient:
     default:
         break;
@@ -311,6 +332,8 @@ void statusLedTask(void *arg)
 void initStatusLed()
 {
 #if PROJECT_HAS_BOARD_LED
+    EEPROM::getInstance();
+
     if (statusLedQueue)
     {
         return;
@@ -319,7 +342,7 @@ void initStatusLed()
     Serial.printf("Status LED init: pin=%u active_low=%u brightness=%u\n",
                   (unsigned)STATUS_LED_BOARD_PIN,
                   (unsigned)STATUS_LED_ACTIVE_LOW,
-                  (unsigned)STATUS_LED_BRIGHTNESS);
+                  (unsigned)getConfiguredStatusLedBrightness());
 
     if (!initStatusLedBackend())
     {

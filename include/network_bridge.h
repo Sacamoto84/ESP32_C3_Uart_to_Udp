@@ -2,6 +2,9 @@
 
 #include "define.h"
 
+constexpr int kNetworkTxQueueMinLength = 4;
+constexpr int kNetworkTxQueueMaxLength = 1024;
+
 // Служебное преобразование кода мощности Wi-Fi в строку для UI/дисплея.
 String WifiCurrentPowerString(int power);
 

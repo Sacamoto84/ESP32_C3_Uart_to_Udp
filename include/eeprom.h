@@ -7,6 +7,19 @@
 
 extern GyverDBFile db;
 
+#if defined(PROJECT_NETWORK_TX_QUEUE_LENGTH)
+constexpr int kDefaultNetworkTxQueueLength = PROJECT_NETWORK_TX_QUEUE_LENGTH;
+#else
+constexpr int kDefaultNetworkTxQueueLength = 32;
+#endif
+
+constexpr int kDefaultSerialRxBufferKb = 64;
+constexpr int kSerialRxBufferMinKb = 1;
+constexpr int kSerialRxBufferMaxKb = 256;
+constexpr int kDefaultStatusLedBrightness = 255;
+constexpr int kStatusLedBrightnessMin = 0;
+constexpr int kStatusLedBrightnessMax = 255;
+
 // База данных для хранения настроек.
 // GyverDBFile сам сохраняет изменения в файл при update().
 
@@ -31,7 +44,10 @@ DB_KEYS(
     staticGateway,
     staticSubnet,
     wifiPower,
-    screenBrightness);
+    screenBrightness,
+    networkTxQueueLength,
+    serialRxBufferKb,
+    statusLedBrightness);
 
 // Получаем единственный экземпляр:
 // EEPROM& settings = EEPROM::getInstance();
@@ -76,6 +92,9 @@ private:
         db.init(kk::staticSubnet, "255.255.255.0");
         db.init(kk::wifiPower, WIFI_POWER_8_5dBm);
         db.init(kk::screenBrightness, 207);
+        db.init(kk::networkTxQueueLength, kDefaultNetworkTxQueueLength);
+        db.init(kk::serialRxBufferKb, kDefaultSerialRxBufferKb);
+        db.init(kk::statusLedBrightness, kDefaultStatusLedBrightness);
     }
 };
 

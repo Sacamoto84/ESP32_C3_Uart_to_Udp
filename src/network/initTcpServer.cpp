@@ -73,14 +73,34 @@ bool tryCreateNetworkQueueInInternalRam(uint32_t queueLength)
     return networkTxQueue != nullptr;
 }
 
+uint32_t getConfiguredNetworkTxQueueLength()
+{
+    const int configuredLength = db.get(kk::networkTxQueueLength);
+
+    if (configuredLength < kNetworkTxQueueMinLength)
+    {
+        return (uint32_t)kNetworkTxQueueMinLength;
+    }
+
+    if (configuredLength > kNetworkTxQueueMaxLength)
+    {
+        return (uint32_t)kNetworkTxQueueMaxLength;
+    }
+
+    return (uint32_t)configuredLength;
+}
+
 // Пытаемся создать максимально большую очередь для burst-трафика UART.
 // Если памяти не хватает, автоматически откатываемся на более короткую очередь,
     // чтобы TCP server всё равно поднялся и устройство не осталось без порта 8888.
 uint32_t createBestEffortNetworkQueue()
 {
-    uint32_t queueLength = NETWORK_TX_QUEUE_LENGTH;
+    uint32_t queueLength = getConfiguredNetworkTxQueueLength();
 
-    while (queueLength >= 4)
+    Serial.printf("initTcpServer: configured TX queue length %u chunks\n",
+                  (unsigned)queueLength);
+
+    while (queueLength >= (uint32_t)kNetworkTxQueueMinLength)
     {
         if (tryCreateNetworkQueueInPsram(queueLength))
         {
@@ -94,7 +114,17 @@ uint32_t createBestEffortNetworkQueue()
 
         Serial.printf("initTcpServer: queue length %u failed in PSRAM and internal RAM, trying smaller queue\n",
                       (unsigned)queueLength);
+
+        if (queueLength == (uint32_t)kNetworkTxQueueMinLength)
+        {
+            break;
+        }
+
         queueLength /= 2;
+        if (queueLength < (uint32_t)kNetworkTxQueueMinLength)
+        {
+            queueLength = (uint32_t)kNetworkTxQueueMinLength;
+        }
     }
 
     releaseStaticQueueBuffers();

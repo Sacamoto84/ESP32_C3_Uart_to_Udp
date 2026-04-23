@@ -5,13 +5,135 @@
 
 namespace
 {
-// Буфер драйвера UART.
-// Он нужен, чтобы короткие всплески входящего потока не терялись сразу на IRQ-уровне.
-constexpr int kUartRxBufferSize = 1024 * 64;
+constexpr int kBytesPerKb = 1024;
+constexpr int kUartTxBufferSize = 256;
+constexpr int kUartEventQueueLength = 100;
+
+struct MemorySnapshot
+{
+    uint32_t heapSize;
+    uint32_t freeHeap;
+    uint32_t maxHeapBlock;
+    uint32_t psramSize;
+    uint32_t freePsram;
+    uint32_t maxPsramBlock;
+};
 
 // Локальный буфер чтения из драйвера UART.
 // Дальше данные уже дробятся на сетевые чанки фиксированного размера.
 char uartDataBuffer[NETWORK_TX_CHUNK_SIZE * 4];
+
+MemorySnapshot captureMemorySnapshot()
+{
+    return {
+        ESP.getHeapSize(),
+        ESP.getFreeHeap(),
+        ESP.getMaxAllocHeap(),
+        ESP.getPsramSize(),
+        ESP.getFreePsram(),
+        ESP.getMaxAllocPsram()};
+}
+
+long getMemoryDelta(uint32_t before, uint32_t after)
+{
+    return (long)after - (long)before;
+}
+
+void logUartMemorySnapshot(const char *stage, int bufferKb, const MemorySnapshot &snapshot)
+{
+    Serial.printf("UART RX alloc %s %d KB: heap=%u/%u maxHeapBlock=%u psram=%u/%u maxPsramBlock=%u\n",
+                  stage,
+                  bufferKb,
+                  (unsigned)snapshot.freeHeap,
+                  (unsigned)snapshot.heapSize,
+                  (unsigned)snapshot.maxHeapBlock,
+                  (unsigned)snapshot.freePsram,
+                  (unsigned)snapshot.psramSize,
+                  (unsigned)snapshot.maxPsramBlock);
+}
+
+void logUartMemoryDelta(int bufferKb,
+                        esp_err_t result,
+                        const MemorySnapshot &before,
+                        const MemorySnapshot &after)
+{
+    Serial.printf("UART RX alloc after %d KB result=%d: freeHeap=%u (%ld) maxHeapBlock=%u (%ld) freePsram=%u (%ld) maxPsramBlock=%u (%ld)\n",
+                  bufferKb,
+                  (int)result,
+                  (unsigned)after.freeHeap,
+                  getMemoryDelta(before.freeHeap, after.freeHeap),
+                  (unsigned)after.maxHeapBlock,
+                  getMemoryDelta(before.maxHeapBlock, after.maxHeapBlock),
+                  (unsigned)after.freePsram,
+                  getMemoryDelta(before.freePsram, after.freePsram),
+                  (unsigned)after.maxPsramBlock,
+                  getMemoryDelta(before.maxPsramBlock, after.maxPsramBlock));
+}
+
+int getConfiguredSerialRxBufferKb()
+{
+    const int configuredKb = db.get(kk::serialRxBufferKb);
+
+    if (configuredKb < kSerialRxBufferMinKb)
+    {
+        return kSerialRxBufferMinKb;
+    }
+
+    if (configuredKb > kSerialRxBufferMaxKb)
+    {
+        return kSerialRxBufferMaxKb;
+    }
+
+    return configuredKb;
+}
+
+int installUartDriverBestEffort()
+{
+    int bufferKb = getConfiguredSerialRxBufferKb();
+
+    Serial.printf("UART RX buffer configured %d KB\n", bufferKb);
+
+    while (bufferKb >= kSerialRxBufferMinKb)
+    {
+        const int rxBufferSize = bufferKb * kBytesPerKb;
+        const MemorySnapshot before = captureMemorySnapshot();
+        logUartMemorySnapshot("before", bufferKb, before);
+
+        const esp_err_t result = uart_driver_install(
+            UART_NUM_0,
+            rxBufferSize,
+            kUartTxBufferSize,
+            kUartEventQueueLength,
+            &uartQueue,
+            0);
+
+        const MemorySnapshot after = captureMemorySnapshot();
+        logUartMemoryDelta(bufferKb, result, before, after);
+
+        if (result == ESP_OK)
+        {
+            Serial.printf("UART driver started, RX buffer %d KB\n", bufferKb);
+            return bufferKb;
+        }
+
+        Serial.printf("uart_driver_install failed for RX buffer %d KB: %d\n",
+                      bufferKb,
+                      (int)result);
+
+        if (bufferKb == kSerialRxBufferMinKb)
+        {
+            break;
+        }
+
+        bufferKb /= 2;
+        if (bufferKb < kSerialRxBufferMinKb)
+        {
+            bufferKb = kSerialRxBufferMinKb;
+        }
+    }
+
+    return 0;
+}
 } // namespace
 
 // Инициализация UART.
@@ -28,14 +150,34 @@ void initUART()
         .rx_flow_ctrl_thresh = 122,
     };
 
-    uart_param_config(UART_NUM_0, &config);
-    uart_driver_install(UART_NUM_0, kUartRxBufferSize, 256, 100, &uartQueue, 0);
-    uart_set_pin(UART_NUM_0, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    const esp_err_t configResult = uart_param_config(UART_NUM_0, &config);
+    if (configResult != ESP_OK)
+    {
+        Serial.printf("uart_param_config failed: %d\n", (int)configResult);
+        return;
+    }
+
+    if (installUartDriverBestEffort() == 0)
+    {
+        Serial.println("UART driver start failed: RX buffer was not allocated");
+        return;
+    }
+
+    const esp_err_t pinResult = uart_set_pin(UART_NUM_0, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+    if (pinResult != ESP_OK)
+    {
+        Serial.printf("uart_set_pin failed: %d\n", (int)pinResult);
+        return;
+    }
 #if defined(HW_VARIANT_ESP32_S2_MINI)
     gpio_set_pull_mode((gpio_num_t)UART_RX_PIN, GPIO_PULLDOWN_ONLY);
 #endif
     uart_flush_input(UART_NUM_0);
-    xTaskCreate(uartTask, "uartTask", 10000, nullptr, 1, nullptr);
+    if (xTaskCreate(uartTask, "uartTask", 10000, nullptr, 1, nullptr) != pdPASS)
+    {
+        Serial.println("uartTask create failed");
+        return;
+    }
 
     const char *banner = "UART to TCP server " BOARD_LABEL " V" FW_VERSION "\n";
     enqueueNetworkTxData((const uint8_t *)banner, strlen(banner));

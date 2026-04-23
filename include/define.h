@@ -27,9 +27,6 @@
 // Для переопределения полярности светодиода добавьте:
 // -DPROJECT_BOARD_LED_ACTIVE_LOW=1  -> LED светит при уровне LOW
 // -DPROJECT_BOARD_LED_ACTIVE_LOW=0  -> LED светит при уровне HIGH
-// Для задания яркости статусного светодиода добавьте:
-// -DPROJECT_BOARD_LED_BRIGHTNESS=32 -> яркость PWM в диапазоне 0..255
-
 #if PROJECT_HAS_SCREEN
 #include <SPI.h>
 #include <Wire.h>
@@ -107,12 +104,6 @@ using OledDisplay = U8G2_SSD1306_128X64_NONAME_F_4W_HW_SPI;
 #define STATUS_LED_ACTIVE_LOW STATUS_LED_ACTIVE_LOW_DEFAULT
 #endif
 
-#if defined(PROJECT_BOARD_LED_BRIGHTNESS)
-#define STATUS_LED_BRIGHTNESS PROJECT_BOARD_LED_BRIGHTNESS
-#else
-#define STATUS_LED_BRIGHTNESS 255
-#endif
-
 #if defined(PROJECT_NETWORK_TX_CHUNK_SIZE)
 #define NETWORK_TX_CHUNK_SIZE PROJECT_NETWORK_TX_CHUNK_SIZE
 #else
@@ -132,6 +123,14 @@ using OledDisplay = U8G2_SSD1306_128X64_NONAME_F_4W_HW_SPI;
 #define PROJECT_UART_VERBOSE_LOG_ENABLED 1
 #else
 #define PROJECT_UART_VERBOSE_LOG_ENABLED 0
+#endif
+
+// Wait for the USB serial monitor at boot so early diagnostics are visible.
+// Override with -DPROJECT_BOOT_SERIAL_DELAY_MS=0 to disable.
+#if defined(PROJECT_BOOT_SERIAL_DELAY_MS)
+#define BOOT_SERIAL_DELAY_MS PROJECT_BOOT_SERIAL_DELAY_MS
+#else
+#define BOOT_SERIAL_DELAY_MS 5000
 #endif
 
 // Значения по умолчанию для Wi-Fi.

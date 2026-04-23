@@ -3,6 +3,7 @@
 #include "app_globals.h"
 #include "display.h"
 #include "network_bridge.h"
+#include "status_led.h"
 
 #include <esp_wifi.h>
 #include <lwip/inet.h>
@@ -119,14 +120,6 @@ void build(sets::Builder &b)
         String queueLabel = "Очередь UART->TCP: " + String(getNetworkTxQueueCapacity()) +
                             " x " + String(NETWORK_TX_CHUNK_SIZE) + " байт";
         b.Label(queueLabel.c_str());
-        if (getNetworkTxQueueCapacity() == 0)
-        {
-            b.Paragraph("", Text("Очередь не создалась, проверьте лог и уменьшите размеры буферов"));
-        }
-        else
-        {
-            b.Paragraph("", Text("При переполнении новые данные дропаются без краша прошивки"));
-        }
 
         const String ram = "psramSize=" + String(ESP.getPsramSize()) + " freePsram=" + String(ESP.getFreePsram()) + "\nmaxPsramBlock=" + String(ESP.getMaxAllocPsram()) + " freeHeap=" + String(ESP.getFreeHeap());
         b.Paragraph("", Text(ram));
@@ -137,7 +130,50 @@ void build(sets::Builder &b)
 
         b.Number(kk::Serial2Bitrate, "Битрейт", nullptr, 300, 4000000);
 
+        if (b.Number(kk::serialRxBufferKb,
+                     "RX буфер Serial, KB",
+                     nullptr,
+                     kSerialRxBufferMinKb,
+                     kSerialRxBufferMaxKb))
+        {
+            db.update();
+            b.reload();
+        }
+
+        if (b.Number(kk::networkTxQueueLength,
+                     "Размер TX-очереди",
+                     nullptr,
+                     kNetworkTxQueueMinLength,
+                     kNetworkTxQueueMaxLength))
+        {
+            db.update();
+            b.reload();
+        }
+        b.Label("Применится после перезагрузки ESP32");
+
+        if (getNetworkTxQueueCapacity() == 0)
+        {
+            b.Paragraph("", Text("Очередь не создалась, проверьте лог и уменьшите размеры буферов"));
+        }
+        else
+        {
+            b.Paragraph("", Text("При переполнении новые данные дропаются без краша прошивки"));
+        }
+
         b.Switch(kk::echo, "Эхо");
+
+#if PROJECT_HAS_BOARD_LED
+        if (b.Number(kk::statusLedBrightness,
+                     "Яркость LED",
+                     nullptr,
+                     kStatusLedBrightnessMin,
+                     kStatusLedBrightnessMax))
+        {
+            db.update();
+            sendStatusLedCommand(StatusLedCommand::RefreshBrightness);
+            b.reload();
+        }
+#endif
 
 #if PROJECT_HAS_SCREEN
         // Яркость задаётся напрямую в диапазоне 0..255,
@@ -188,7 +224,7 @@ void build(sets::Builder &b)
     b.Switch(kk::externalScreen, "Внешний экран по UDP 82 порту");
 #endif
 
-    if (b.Button("Сброс ESP32"))
+    if (b.Button("Перезагрузка ESP32"))
     {
         ESP.restart();
     }

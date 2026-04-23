@@ -1,5 +1,34 @@
 #include "hardware.h"
 
+namespace
+{
+void waitForBootSerialMonitor()
+{
+#if BOOT_SERIAL_DELAY_MS > 0
+    const uint32_t startedAt = millis();
+
+#if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT
+    while (!Serial && (millis() - startedAt) < (uint32_t)BOOT_SERIAL_DELAY_MS)
+    {
+        delay(10);
+    }
+
+    if (Serial)
+    {
+        delay(200);
+    }
+#else
+    delay(BOOT_SERIAL_DELAY_MS);
+#endif
+
+    Serial.printf("Boot serial wait done after %u ms, limit=%u ms, connected=%s\n",
+                  (unsigned)(millis() - startedAt),
+                  (unsigned)BOOT_SERIAL_DELAY_MS,
+                  Serial ? "yes" : "no");
+#endif
+}
+} // namespace
+
 // Инициализация служебных пинов платы.
 // Для ESP32-S2 Mini здесь удерживаются уровни на boot-линиях,
 // для ESP32-C3 подготавливаются линии, используемые проектом.
@@ -35,5 +64,6 @@ void initPins()
 void initSerialAndFS()
 {
     Serial.begin(460800);
+    waitForBootSerialMonitor();
     LittleFS.begin(true);
 }

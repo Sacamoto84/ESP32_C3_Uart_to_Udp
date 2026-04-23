@@ -183,7 +183,7 @@ RESET -> -1
 
 - `LOLIN S2 Mini` — обычный GPIO, LED **active HIGH** (`-DPROJECT_BOARD_LED_ACTIVE_LOW=0`).
 
-Яркость задаётся через PWM (`-DPROJECT_BOARD_LED_BRIGHTNESS=0..255`). Если значение равно `0` или `255`, используется прямой `digitalWrite` без PWM.
+Яркость задаётся в web-портале и хранится в базе настроек. По умолчанию используется полная яркость `255`.
 
 ## Очередь UART -> TCP и PSRAM
 
@@ -208,12 +208,12 @@ struct NetworkTxChunk {
 Текущие compile-time размеры:
 
 - `PROJECT_NETWORK_TX_CHUNK_SIZE = 1460`
-- `PROJECT_NETWORK_TX_QUEUE_LENGTH = 64` для `ESP32-C3`
-- `PROJECT_NETWORK_TX_QUEUE_LENGTH = 256` для `ESP32-S2 Mini`
+- `PROJECT_NETWORK_TX_QUEUE_LENGTH` задаёт только первое значение по умолчанию в базе настроек
+- дальше размер TX-очереди меняется в web-портале и применяется после перезагрузки ESP32
 
 Дополнительно:
 
-- драйверный RX-буфер UART: `64 KB`
+- драйверный RX-буфер UART: по умолчанию `64 KB`, дальше меняется в web-портале
 - локальный буфер чтения из UART: `NETWORK_TX_CHUNK_SIZE * 4`
 - таймаут записи TCP: `3000 ms`
 
@@ -224,11 +224,13 @@ struct NetworkTxChunk {
 Портал настроек поднимается на ESP32 и позволяет менять:
 
 - bitrate UART
+- размер входного RX-буфера Serial/UART в KB
 - SSID и пароль Wi-Fi
 - включение `static IP`
 - `static IP`, `gateway`, `subnet`
 - `echo`
 - мощность передатчика Wi-Fi
+- яркость встроенного LED, если LED включён в сборке
 - яркость OLED, если экран есть
 - включение внешнего экрана по UDP `82`, если экран есть
 - перезагрузку ESP32
@@ -288,12 +290,6 @@ platformio run --environment lolin_s2_mini_ota --target upload
 -DPROJECT_BOARD_LED_ACTIVE_LOW=0
 ```
 
-### Яркость LED через PWM [0..255]
-
-```text
--DPROJECT_BOARD_LED_BRIGHTNESS=32
-```
-
 ### Размеры сетевых буферов
 
 ```text
@@ -301,12 +297,24 @@ platformio run --environment lolin_s2_mini_ota --target upload
 -DPROJECT_NETWORK_TX_QUEUE_LENGTH=256
 ```
 
+`PROJECT_NETWORK_TX_QUEUE_LENGTH` теперь используется только как стартовое значение для новой базы настроек.
+После первого запуска размер TX-очереди меняется через web-портал.
+
 ### Подробный лог UART hot path
 
 Включать только для отладки, потому что заметно нагружает быстрый путь:
 
 ```text
 -DPROJECT_UART_VERBOSE_LOG=1
+```
+
+### Ожидание Serial-монитора при старте
+
+По умолчанию прошивка ждёт подключение Serial-монитора до `5000 ms`, чтобы ранние диагностические логи не терялись сразу после сброса.
+Отключить ожидание или изменить таймаут можно флагом:
+
+```text
+-DPROJECT_BOOT_SERIAL_DELAY_MS=0
 ```
 
 ### OTA hostname и пароль

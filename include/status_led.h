@@ -12,6 +12,7 @@ enum class StatusLedCommand : uint8_t
     ClientConnected,
     AccessPoint,
     PulseNetworkActivity,
+    RefreshBrightness,
 };
 
 // Стартует отдельную задачу управления LED на core 0 с минимальным приоритетом.
