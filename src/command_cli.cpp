@@ -8,29 +8,34 @@ SimpleCLI cli;
 
 namespace
 {
+Command gHelpCommand;
+Command gStatusCommand;
+Command gRebootCommand;
+Command gResetPulseCommand;
+
 // Отправляет ответ CLI в USB-лог и, если клиент подключён, обратно в TCP-командный сокет.
 void sendCliResponse(const String &message)
 {
-    Serial.println(message);
-
-    if (tcpCommandClient.connected())
+    if (message.isEmpty())
     {
-        tcpCommandClient.println(message);
+        return;
     }
+
+    Serial.println(message);
+    tcpCommandClient.print(message);
+    tcpCommandClient.print("\n");
+    tcpCommandClient.flush();
 }
 
 // Печатает список зарегистрированных CLI-команд.
-void helpCallback(cmd *commandPointer)
+void handleHelpCommand()
 {
-    (void)commandPointer;
-    sendCliResponse(cli.toString());
+    sendCliResponse("Help:\n" + cli.toString());
 }
 
 // Возвращает компактную сводку о текущем состоянии моста и сети.
-void statusCallback(cmd *commandPointer)
+void handleStatusCommand()
 {
-    (void)commandPointer;
-
     String status = "ip=" + WiFi.localIP().toString() +
                     " tcpRead=" + String(kTcpServerPort) +
                     " tcpCmd=" + String(kTcpCommandPort) +
@@ -40,19 +45,16 @@ void statusCallback(cmd *commandPointer)
 }
 
 // Перезагружает ESP32 после подтверждения действия вызывающей стороне.
-void rebootCallback(cmd *commandPointer)
+void handleRebootCommand()
 {
-    (void)commandPointer;
     sendCliResponse("rebooting");
     delay(20);
     ESP.restart();
 }
 
 // Даёт такой же низкий импульс сброса, как и кнопка в settings-портале.
-void resetPulseCallback(cmd *commandPointer)
+void handleResetPulseCommand()
 {
-    (void)commandPointer;
-
     sendCliResponse("reset pulse");
     pinMode(RESET_PULSE_PIN, OUTPUT);
     digitalWrite(RESET_PULSE_PIN, LOW);
@@ -61,31 +63,63 @@ void resetPulseCallback(cmd *commandPointer)
     digitalWrite(RESET_PULSE_PIN, HIGH);
 }
 
-// Преобразует ошибку SimpleCLI в читаемый текстовый ответ.
-void errorCallback(cmd_error *errorPointer)
+// Сливает очередь ошибок SimpleCLI в логи и TCP-ответ.
+void drainCliErrors()
 {
-    CommandError error(errorPointer);
-    const String message = "CLI error: " + error.toString();
-    sendCliResponse(message);
+    while (cli.errored())
+    {
+        CommandError error = cli.getError();
+        const String message = "CLI error: " + error.toString();
+        sendCliResponse(message);
+    }
+}
+
+// Забирает все распознанные команды из очереди SimpleCLI и выполняет нужный обработчик.
+void drainCliCommands()
+{
+    while (cli.available())
+    {
+        Command command = cli.getCmd();
+        const String commandName = command.getName();
+
+        if (command == gHelpCommand)
+        {
+            handleHelpCommand();
+        }
+        else if (command == gStatusCommand)
+        {
+            handleStatusCommand();
+        }
+        else if (command == gRebootCommand)
+        {
+            handleRebootCommand();
+        }
+        else if (command == gResetPulseCommand)
+        {
+            handleResetPulseCommand();
+        }
+        else
+        {
+            sendCliResponse("CLI warning: unhandled command " + commandName);
+        }
+    }
 }
 }
 
 // Регистрирует встроенные команды, доступные через TCP 8900.
 void initCommandCli()
 {
-    Command helpCommand = cli.addCmd("help", helpCallback);
-    helpCommand.setDescription("Print registered SimpleCLI commands");
+    gHelpCommand = cli.addCmd("help");
+    gHelpCommand.setDescription("Print registered SimpleCLI commands");
 
-    Command statusCommand = cli.addCmd("status", statusCallback);
-    statusCommand.setDescription("Print current bridge status");
+    gStatusCommand = cli.addCmd("status");
+    gStatusCommand.setDescription("Print current bridge status");
 
-    Command rebootCommand = cli.addCmd("reboot", rebootCallback);
-    rebootCommand.setDescription("Restart ESP32");
+    gRebootCommand = cli.addCmd("reboot");
+    gRebootCommand.setDescription("Restart ESP32");
 
-    Command resetPulseCommand = cli.addCmd("resetpulse", resetPulseCallback);
-    resetPulseCommand.setDescription("Send low pulse to RESET_PULSE_PIN");
-
-    cli.setOnError(errorCallback);
+    gResetPulseCommand = cli.addCmd("resetpulse");
+    gResetPulseCommand.setDescription("Send low pulse to RESET_PULSE_PIN");
 
     Serial.println("SimpleCLI initialized");
 }
@@ -101,6 +135,7 @@ void executeCliCommandLine(const String &line)
         return;
     }
 
-    Serial.printf("CLI parse: %s\n", normalized.c_str());
     cli.parse(normalized);
+    drainCliCommands();
+    drainCliErrors();
 }

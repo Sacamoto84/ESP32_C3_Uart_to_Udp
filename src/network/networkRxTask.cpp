@@ -38,8 +38,7 @@ void dispatchTcpCommandBuffer(const char *reason)
         return;
     }
 
-    Serial.printf("TCP 8900 command (%s): %s%s\n",
-                  (reason != nullptr && reason[0] != '\0') ? reason : "received",
+    Serial.printf("TCP 8900: %s%s\n",
                   commandLine.c_str(),
                   truncated ? " [truncated]" : "");
     executeCliCommandLine(commandLine);
@@ -49,11 +48,6 @@ void dispatchTcpCommandBuffer(const char *reason)
 void finishTcpCommandClient(const char *reason)
 {
     dispatchTcpCommandBuffer(reason);
-
-    if (reason != nullptr && reason[0] != '\0')
-    {
-        Serial.println(reason);
-    }
 
     tcpCommandClient.stop();
     resetTcpCommandCapture();
@@ -110,9 +104,6 @@ void pollTcpCommandServer()
 
     if (tcpCommandClient.connected())
     {
-        Serial.printf("pollTcpCommandServer: rejecting extra client %s:%u\n",
-                      newClient.remoteIP().toString().c_str(),
-                      newClient.remotePort());
         newClient.stop();
         return;
     }
@@ -128,9 +119,6 @@ void pollTcpCommandServer()
     tcpCommandClient = newClient;
     resetTcpCommandCapture();
 
-    Serial.printf("pollTcpCommandServer: TCP 8900 client connected from %s:%u\n",
-                  tcpCommandClient.remoteIP().toString().c_str(),
-                  tcpCommandClient.remotePort());
 }
 
 // Вычитывает ожидающие байты команды и завершает её по newline, idle timeout или disconnect.
