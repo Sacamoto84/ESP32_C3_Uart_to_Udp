@@ -1,6 +1,7 @@
 #include "command_cli.h"
 
 #include "app_globals.h"
+#include "hardware.h"
 #include "network/network_internal.h"
 
 // Общий экземпляр CLI, который обслуживает командный канал TCP 8900.
@@ -56,11 +57,7 @@ void handleRebootCommand()
 void handleResetPulseCommand()
 {
     sendCliResponse("reset pulse");
-    pinMode(RESET_PULSE_PIN, OUTPUT);
-    digitalWrite(RESET_PULSE_PIN, LOW);
-    delay(100);
-    pinMode(RESET_PULSE_PIN, OPEN_DRAIN);
-    digitalWrite(RESET_PULSE_PIN, HIGH);
+    pulseResetLine();
 }
 
 // Сливает очередь ошибок SimpleCLI в логи и TCP-ответ.

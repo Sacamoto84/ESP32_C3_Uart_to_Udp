@@ -39,7 +39,7 @@ bool sendTcpChunk(const uint8_t *payload, size_t len)
             return false;
         }
 
-        delay(1);
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 
     sendStatusLedCommand(StatusLedCommand::PulseNetworkActivity);

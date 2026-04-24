@@ -2,11 +2,8 @@
 #define _define_h
 
 #include <Arduino.h>
-#include <ArduinoOTA.h>
 #include <WiFi.h>
 #include <WiFiUdp.h>
-
-#include <SettingsGyver.h>
 
 // Для сборки без локального OLED-экрана добавьте:
 // -DPROJECT_NO_SCREEN=1
@@ -21,9 +18,6 @@
 #include <Wire.h>
 #include <U8g2lib.h>
 #endif
-#include "mString.h"
-#include <GyverDBFile.h>
-#include "eeprom.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -35,7 +29,7 @@
 #define SCREEN_WIDTH 128
 #define SCREEN_HEIGHT 64
 
-#define FW_VERSION "1.6.8"
+#define FW_VERSION "1.7.1"
 
 // Назначение пинов зависит от выбранного окружения PlatformIO и варианта платы.
 #if defined(HW_VARIANT_ESP32_S2_MINI)

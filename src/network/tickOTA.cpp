@@ -1,5 +1,7 @@
 #include "network_internal.h"
 
+#include <ArduinoOTA.h>
+
 // Обслуживает входящий OTA-трафик и связанные обработчики из главного цикла.
 void tickOTA()
 {

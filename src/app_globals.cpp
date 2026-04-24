@@ -9,9 +9,9 @@ WiFiServer tcpCommandServer(8900);
 WiFiClient tcpCommandClient;
 QueueHandle_t uartQueue;
 QueueHandle_t networkTxQueue;
-volatile bool tcpClientConnected = false;
-volatile uint32_t droppedNetworkTxBytes = 0;
-volatile uint32_t actualNetworkTxQueueLength = 0;
+std::atomic<bool> tcpClientConnected{false};
+std::atomic<uint32_t> droppedNetworkTxBytes{0};
+std::atomic<uint32_t> actualNetworkTxQueueLength{0};
 
 // Постоянное хранилище настроек и веб-портал живут всё время работы прошивки.
 GyverDBFile db(&LittleFS, "/data.db", 500);

@@ -1,6 +1,7 @@
 #include "display.h"
 
 #include "app_globals.h"
+#include "hardware.h"
 #include "network_bridge.h"
 
 namespace
@@ -36,9 +37,6 @@ void applyDisplayBrightness(uint8_t brightness)
 // Инициализирует шину, драйвер OLED и первый пустой кадр.
 void initDisplay()
 {
-    // Убеждаемся, что база настроек уже поднята, прежде чем читать яркость экрана.
-    EEPROM::getInstance();
-
 #if !PROJECT_HAS_SCREEN
     return;
 #else
@@ -74,9 +72,7 @@ void screenLoop()
 
     // В режиме STA показываем IP станции, а в режиме AP — адрес точки доступа.
     const long rssi = WiFi.RSSI();
-    const wifi_mode_t wifiMode = WiFi.getMode();
-    const bool apMode = (wifiMode == WIFI_MODE_AP || wifiMode == WIFI_MODE_APSTA);
-    const IPAddress ip = apMode ? WiFi.softAPIP() : WiFi.localIP();
+    const IPAddress ip = isAccessPointMode() ? WiFi.softAPIP() : WiFi.localIP();
 
     char line[48];
     char rssiText[16];

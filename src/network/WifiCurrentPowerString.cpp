@@ -28,9 +28,6 @@ constexpr WifiPowerLabel kWifiPowerLabels[] = {
 // Преобразует текущий код мощности в строку, которую можно показать в интерфейсе и логах.
 String WifiCurrentPowerString(int power)
 {
-    Serial.print("Current TX Power code: ");
-    Serial.println(power);
-
     for (const auto &label : kWifiPowerLabels)
     {
         if (label.dbValue == power)

@@ -1,7 +1,12 @@
 #include "hardware.h"
 
+#include <LittleFS.h>
+
 namespace
 {
+constexpr uint32_t kUsbSerialBaud = 460800;
+constexpr uint32_t kResetPulseLowMs = 100;
+
 // Даёт USB Serial Monitor короткое окно на подключение, чтобы ранние логи не потерялись.
 void waitForBootSerialMonitor()
 {
@@ -41,27 +46,36 @@ void initPins()
     digitalWrite(BOOT_HIGH_PIN, HIGH);
 
     delay(200);
-#else
-    pinMode(0, OUTPUT);
-    pinMode(1, OUTPUT);
-    pinMode(2, OUTPUT);
-    pinMode(3, OUTPUT);
-    pinMode(4, OUTPUT);
-    pinMode(5, OUTPUT);
-    pinMode(6, OUTPUT);
-    pinMode(7, OUTPUT);
-#if STATUS_LED_BOARD_PIN != 8
-    pinMode(8, OUTPUT);
 #endif
-    pinMode(9, OPEN_DRAIN);
-    pinMode(10, OUTPUT);
-#endif
+
+    // Держим линию сброса внешнего устройства отпущенной сразу на старте,
+    // чтобы подключённое оборудование не перезапускалось при каждом ребуте ESP32.
+    // Остальные пины (OLED, UART, LED) настраиваются своими драйверами позже.
+    pinMode(RESET_PULSE_PIN, OPEN_DRAIN);
+    digitalWrite(RESET_PULSE_PIN, HIGH);
 }
 
 // Запускает логирование и монтирует LittleFS, где лежит база настроек.
 void initSerialAndFS()
 {
-    Serial.begin(460800);
+    Serial.begin(kUsbSerialBaud);
     waitForBootSerialMonitor();
     LittleFS.begin(true);
+}
+
+// Выполняет низкий импульс сброса на RESET_PULSE_PIN для перезагрузки внешнего устройства.
+void pulseResetLine()
+{
+    pinMode(RESET_PULSE_PIN, OUTPUT);
+    digitalWrite(RESET_PULSE_PIN, LOW);
+    delay(kResetPulseLowMs);
+    pinMode(RESET_PULSE_PIN, OPEN_DRAIN);
+    digitalWrite(RESET_PULSE_PIN, HIGH);
+}
+
+// Возвращает true, если Wi-Fi сейчас в режиме точки доступа (AP или APSTA).
+bool isAccessPointMode()
+{
+    const wifi_mode_t mode = WiFi.getMode();
+    return (mode == WIFI_MODE_AP || mode == WIFI_MODE_APSTA);
 }

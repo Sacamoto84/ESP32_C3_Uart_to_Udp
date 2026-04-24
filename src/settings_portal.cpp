@@ -2,6 +2,7 @@
 
 #include "app_globals.h"
 #include "display.h"
+#include "hardware.h"
 #include "network_bridge.h"
 #include "status_led.h"
 
@@ -10,6 +11,9 @@
 
 namespace
 {
+    // Полностью перестраивает интерфейс SettingsGyver для текущего запроса.
+    void buildSettingsPage(sets::Builder &b);
+
     // Набор кнопок выбора фиксированной мощности Wi-Fi.
     struct WifiPowerOption
     {
@@ -78,9 +82,7 @@ namespace
     // Возвращает IP, который должен отображаться в портале для текущего Wi-Fi режима.
     IPAddress currentPortalIp()
     {
-        const wifi_mode_t wifiMode = WiFi.getMode();
-        const bool apMode = (wifiMode == WIFI_MODE_AP || wifiMode == WIFI_MODE_APSTA);
-        return apMode ? WiFi.softAPIP() : WiFi.localIP();
+        return isAccessPointMode() ? WiFi.softAPIP() : WiFi.localIP();
     }
 }
 
@@ -88,23 +90,14 @@ namespace
 void initSettings()
 {
     sett.begin(true);
-    sett.onBuild(build);
+    sett.onBuild(buildSettingsPage);
 }
 
-// Полностью перестраивает интерфейс SettingsGyver для текущего запроса.
-void build(sets::Builder &b)
+namespace
 {
-    Serial.println("build");
-
-#if PROJECT_HAS_SCREEN
-    if (b.build.isAction() && b.build.id == kk::screenBrightness)
-    {
-        String rawBrightness = b.build.value;
-        Serial.print("[Brightness] action received, raw value: ");
-        Serial.println(rawBrightness);
-    }
-#endif
-
+// Полностью перестраивает интерфейс SettingsGyver для текущего запроса.
+void buildSettingsPage(sets::Builder &b)
+{
     {
         sets::Group g(b, "Статус");
 
@@ -191,18 +184,9 @@ void build(sets::Builder &b)
         // чтобы без преобразований писать значение в контроллер дисплея.
         if (b.Number(kk::screenBrightness, "Яркость экрана", nullptr, 0, 255))
         {
-            int brightness = constrain((int)db.get(kk::screenBrightness), 0, 255);
-
-            Serial.print("[Brightness] number callback, value: ");
-            Serial.println(brightness);
-
+            const int brightness = constrain((int)db.get(kk::screenBrightness), 0, 255);
             applyDisplayBrightness((uint8_t)brightness);
-
-            bool saved = db.update();
-            Serial.print("[Brightness] db.update result: ");
-            Serial.println(saved ? "true" : "false");
-            Serial.print("[Brightness] applied value: ");
-            Serial.println(brightness);
+            db.update();
             b.reload();
             sett.reload(true);
         }
@@ -244,11 +228,7 @@ void build(sets::Builder &b)
     if (b.Button("Выход -> Сброс", 0x25b18f))
     {
         Serial.println("Выход -> Сброс");
-        pinMode(RESET_PULSE_PIN, OUTPUT);
-        digitalWrite(RESET_PULSE_PIN, LOW);
-        delay(100);
-        pinMode(RESET_PULSE_PIN, OPEN_DRAIN);
-        digitalWrite(RESET_PULSE_PIN, HIGH);
+        pulseResetLine();
     }
 
     // Полная очистка базы настроек.
@@ -272,4 +252,5 @@ void build(sets::Builder &b)
     }
 
     b.Label("Версия " FW_VERSION);
+}
 }

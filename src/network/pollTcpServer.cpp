@@ -27,7 +27,7 @@ void pollTcpServer()
     }
 
     newClient.setNoDelay(true);
-    newClient.setTimeout(2000);
+    newClient.setTimeout(kTcpStreamClientTimeoutMs);
 
     tcpClient = newClient;
     tcpClientConnected = true;

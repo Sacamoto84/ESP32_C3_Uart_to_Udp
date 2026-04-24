@@ -1,4 +1,5 @@
 #include "display.h"
+#include "eeprom.h"
 #include "hardware.h"
 #include "command_cli.h"
 #include "network_bridge.h"
@@ -15,6 +16,8 @@ void setup()
 {
     initPins();
     initSerialAndFS();
+    // База настроек должна существовать до любого модуля, читающего db.get(...).
+    EEPROM::getInstance();
     initStatusLed();
     initDisplay();
     initWiFi();

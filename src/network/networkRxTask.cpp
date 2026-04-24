@@ -115,7 +115,7 @@ void pollTcpCommandServer()
     }
 
     newClient.setNoDelay(true);
-    newClient.setTimeout(20);
+    newClient.setTimeout(kTcpCommandClientTimeoutMs);
     tcpCommandClient = newClient;
     resetTcpCommandCapture();
 

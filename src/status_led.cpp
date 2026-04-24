@@ -1,5 +1,7 @@
 #include "status_led.h"
 
+#include "eeprom.h"
+
 #include <freertos/queue.h>
 #include <freertos/task.h>
 
@@ -348,8 +350,6 @@ void statusLedTask(void *arg)
 // Создаёт очередь и задачу, через которые дальше управляется весь LED.
 void initStatusLed()
 {
-    EEPROM::getInstance();
-
     if (statusLedQueue)
     {
         return;

@@ -1,5 +1,6 @@
 #include "network_internal.h"
 
+#include <ArduinoOTA.h>
 #include <ESPmDNS.h>
 
 namespace

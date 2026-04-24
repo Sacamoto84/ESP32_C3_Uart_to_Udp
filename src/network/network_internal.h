@@ -9,6 +9,9 @@ constexpr uint16_t kTcpServerPort = 8888;
 constexpr uint16_t kTcpCommandPort = 8900;
 constexpr uint16_t kHeartbeatPort = 8888;
 constexpr uint32_t kTcpWriteTimeoutMs = 3000;
+// Таймауты WiFiClient.setTimeout для потокового и командного сокета.
+constexpr uint32_t kTcpStreamClientTimeoutMs = 2000;
+constexpr uint32_t kTcpCommandClientTimeoutMs = 20;
 
 // Один фрагмент очереди UART->TCP. Размер чанка фиксирован во время компиляции.
 struct NetworkTxChunk
