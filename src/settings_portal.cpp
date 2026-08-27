@@ -198,6 +198,10 @@ void buildSettingsPage(sets::Builder &b)
         sets::Group g(b, "WiFi");
         b.Input(kk::WIFI_SSID, "SSID");
         b.Input(kk::WIFI_PASS, "Password");
+    }
+
+     {
+        sets::Group g(b, "IP");
 
         if (b.Switch(kk::useStaticIp, "Использовать static IP"))
         {
@@ -214,6 +218,8 @@ void buildSettingsPage(sets::Builder &b)
             b.Label("Static IP применяется после перезагрузки ESP32");
         }
     }
+
+
 
 #if PROJECT_HAS_SCREEN
     b.Switch(kk::externalScreen, "Внешний экран по UDP 82 порту");

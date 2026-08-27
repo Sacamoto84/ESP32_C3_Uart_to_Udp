@@ -23,7 +23,17 @@ bool loadStaticIpConfig(IPAddress &localIp, IPAddress &gateway, IPAddress &subne
 }
 
 #if PROJECT_HAS_SCREEN
+#if SCREEN_WIDTH == 72 && SCREEN_HEIGHT == 40
+constexpr const uint8_t *kStartupDisplayFont = u8g2_font_4x6_tf;
+constexpr uint8_t kStartupSubtitleY = 8;
+constexpr uint8_t kStartupProgressY = 16;
+constexpr uint8_t kStartupMessageY = 24;
+#else
 constexpr const uint8_t *kStartupDisplayFont = u8g2_font_7x13_tr;
+constexpr uint8_t kStartupSubtitleY = 12;
+constexpr uint8_t kStartupProgressY = 24;
+constexpr uint8_t kStartupMessageY = 36;
+#endif
 
 // Сбрасывает стартовый экран в единое текстовое состояние рисования.
 void beginStartupScreenFrame()
@@ -63,15 +73,15 @@ void renderWiFiStartupScreen(const char *title, const char *subtitle, int dots, 
 
     if (subtitle != nullptr && subtitle[0] != '\0')
     {
-        display.setCursor(0, 12);
+        display.setCursor(0, kStartupSubtitleY);
         display.print(subtitle);
     }
 
-    drawDotProgress(24, dots);
+    drawDotProgress(kStartupProgressY, dots);
 
     if (message != nullptr && message[0] != '\0')
     {
-        display.setCursor(0, 36);
+        display.setCursor(0, kStartupMessageY);
         display.print(message);
     }
 

@@ -11,7 +11,7 @@
 - Android сам подключается к ESP32 как `TCP client`
 - `UDP` только для двух служебных задач:
   - heartbeat `ping/pong` на порту `8888`
-  - внешний экран OLED framebuffer на порту `82`, если эта функция включена, отображение 1024 байт на экране
+  - внешний экран OLED framebuffer на порту `82`, если эта функция включена (`1024` байта для 128x64, `360` байт для 72x40)
 
 ## Что умеет проект
 
@@ -115,6 +115,31 @@ GPIO3  -> DC
 GPIO1  -> CS
 GPIO2  -> RESET
 ```
+
+## ESP32-C3 OLED 72x40
+
+Для плат `ESP32-C3 0.42 OLED` / `01Space ESP32C3 0.42 OLED` добавлены окружения:
+
+```text
+esp32-c3-oled-72x40
+esp32-c3-oled-72x40_ota
+```
+
+Встроенный OLED — SSD1306-совместимый, `72x40`, I2C-адрес `0x3C`:
+
+```text
+SDA -> GPIO5
+SCL -> GPIO6
+```
+
+Пины моста по умолчанию:
+
+- `UART TX = GPIO21`
+- `UART RX = GPIO20`
+- `RESET_PULSE_PIN = GPIO10` (GPIO9 не используется, так как это BOOT)
+- `LED = GPIO8`
+
+Малый экран показывает тот же статус в компактном шрифте. В режиме внешнего экрана по UDP он ожидает framebuffer размером `360` байт (`72 * 40 / 8`). Для OTA укажите адрес платы при загрузке, например `platformio run -e esp32-c3-oled-72x40_ota -t upload --upload-port 192.168.1.50`.
 
 ## ESP32-S2 Mini
 
@@ -266,6 +291,7 @@ Environment для OTA:
 
 ```text
 esp32-c3-devkitm-1_ota
+esp32-c3-oled-72x40_ota
 lolin_s2_mini_ota
 ```
 
@@ -274,6 +300,8 @@ lolin_s2_mini_ota
 ```bash
 platformio run --environment esp32-c3-devkitm-1
 platformio run --environment esp32-c3-devkitm-1_ota --target upload
+platformio run --environment esp32-c3-oled-72x40
+platformio run --environment esp32-c3-oled-72x40_ota --target upload --upload-port 192.168.1.50
 platformio run --environment lolin_s2_mini
 platformio run --environment lolin_s2_mini_ota --target upload
 ```

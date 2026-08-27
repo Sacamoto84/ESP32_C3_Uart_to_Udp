@@ -6,12 +6,21 @@
 
 namespace
 {
+#if SCREEN_WIDTH == 72 && SCREEN_HEIGHT == 40
+constexpr const uint8_t *kDisplayFont = u8g2_font_4x6_tf;
+constexpr uint8_t kStatusLine0Y = 0;
+constexpr uint8_t kStatusLine1Y = 8;
+constexpr uint8_t kStatusLine2Y = 16;
+constexpr uint8_t kStatusLine3Y = 24;
+constexpr uint8_t kStatusLine4Y = 32;
+#else
 constexpr const uint8_t *kDisplayFont = u8g2_font_7x13_tr;
 constexpr uint8_t kStatusLine0Y = 0;
 constexpr uint8_t kStatusLine1Y = 13;
 constexpr uint8_t kStatusLine2Y = 26;
 constexpr uint8_t kStatusLine3Y = 39;
 constexpr uint8_t kStatusLine4Y = 52;
+#endif
 
 // Сбрасывает общие параметры рисования текста перед выводом нового кадра состояния.
 void prepareTextFrame()
@@ -71,11 +80,13 @@ void screenLoop()
     EEPROM &eeprom = EEPROM::getInstance();
 
     // В режиме STA показываем IP станции, а в режиме AP — адрес точки доступа.
-    const long rssi = WiFi.RSSI();
     const IPAddress ip = isAccessPointMode() ? WiFi.softAPIP() : WiFi.localIP();
 
     char line[48];
+#if SCREEN_WIDTH != 72 || SCREEN_HEIGHT != 40
+    const long rssi = WiFi.RSSI();
     char rssiText[16];
+#endif
 
     prepareTextFrame();
 
@@ -83,13 +94,22 @@ void screenLoop()
     display.setCursor(0, kStatusLine0Y);
     display.print(line);
 
+#if SCREEN_WIDTH == 72 && SCREEN_HEIGHT == 40
+    // На OLED 72x40 в одну строку помещается только IP-адрес.
+    // RSSI оставляем в Serial-логе, чтобы не ухудшать читаемость экрана.
+#else
     std::snprintf(rssiText, sizeof(rssiText), "%ld", rssi);
     display.setCursor(SCREEN_WIDTH - display.getStrWidth(rssiText), kStatusLine0Y);
     display.print(rssiText);
+#endif
 
     display.setCursor(0, kStatusLine1Y);
+#if SCREEN_WIDTH == 72 && SCREEN_HEIGHT == 40
+    display.print(isTcpClientConnected() ? "TCP:ON" : "TCP:WAIT");
+#else
     display.print("TCP: ");
     display.print(isTcpClientConnected() ? "client on" : "wait client");
+#endif
 
     std::snprintf(line, sizeof(line), "%ld bps", (long)db.get(kk::Serial2Bitrate));
     display.setCursor(0, kStatusLine2Y);

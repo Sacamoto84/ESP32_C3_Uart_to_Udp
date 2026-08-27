@@ -26,14 +26,13 @@
 #include "driver/gpio.h"
 #include "driver/uart.h"
 
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-
-#define FW_VERSION "1.7.1"
+#define FW_VERSION "1.7.2"
 
 // Назначение пинов зависит от выбранного окружения PlatformIO и варианта платы.
 #if defined(HW_VARIANT_ESP32_S2_MINI)
 #define BOARD_LABEL "ESP32-S2 Mini"
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
 #define OLED_USE_I2C 1
 #define OLED_SDA_PIN 21
 #define OLED_SCL_PIN 34
@@ -48,6 +47,8 @@
 #define STATUS_LED_BOARD_PIN 15
 #elif defined(HW_VARIANT_ESP32_C3)
 #define BOARD_LABEL "ESP32-C3"
+#define SCREEN_WIDTH 128
+#define SCREEN_HEIGHT 64
 #define OLED_USE_I2C 0
 #define OLED_MOSI_PIN 6
 #define OLED_CLK_PIN 4
@@ -61,12 +62,33 @@
 #define AP_MODE_PIN 8
 #define RESET_PULSE_PIN 9
 #define STATUS_LED_BOARD_PIN 8
+#elif defined(HW_VARIANT_ESP32_C3_OLED_72X40)
+// 01Space/ESP32-C3 SuperMini OLED: встроенный SSD1306-совместимый OLED 0.42".
+#define BOARD_LABEL "ESP32-C3 OLED 72x40"
+#define SCREEN_WIDTH 72
+#define SCREEN_HEIGHT 40
+#define OLED_USE_I2C 1
+#define OLED_SDA_PIN 5
+#define OLED_SCL_PIN 6
+#define OLED_I2C_ADDR 0x3C
+#define OLED_RESET_PIN -1
+#define UART_TX_PIN 21
+#define UART_RX_PIN 20
+#define BOOT_HIGH_PIN -1
+#define BOOT_LOW_PIN -1
+#define AP_MODE_PIN -1
+// GPIO9 — кнопка BOOT на этой плате, поэтому для линии reset внешнего устройства
+// выбран свободный GPIO10.
+#define RESET_PULSE_PIN 10
+#define STATUS_LED_BOARD_PIN 8
 #else
 #error "Unsupported hardware variant. Add a build flag for the target board."
 #endif
 
 #if PROJECT_HAS_SCREEN
-#if OLED_USE_I2C
+#if defined(HW_VARIANT_ESP32_C3_OLED_72X40)
+using OledDisplay = U8G2_SSD1306_72X40_ER_F_HW_I2C;
+#elif OLED_USE_I2C
 using OledDisplay = U8G2_SSD1306_128X64_NONAME_F_HW_I2C;
 #else
 using OledDisplay = U8G2_SSD1306_128X64_NONAME_F_4W_HW_SPI;
