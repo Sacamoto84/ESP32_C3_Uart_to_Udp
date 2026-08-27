@@ -26,7 +26,7 @@ void pollTcpServer()
 
     if (refreshTcpClientConnectionState("pollTcpServer: TCP client disconnected"))
     {
-        Serial.printf("pollTcpServer: rejecting extra client %s:%u\n",
+        projectLog.printf("pollTcpServer: rejecting extra client %s:%u\n",
                       newClient.remoteIP().toString().c_str(),
                       newClient.remotePort());
         newClient.stop();
@@ -40,13 +40,13 @@ void pollTcpServer()
     tcpClientConnected = true;
     sendStatusLedCommand(StatusLedCommand::ClientConnected);
 
-    Serial.printf("pollTcpServer: TCP client connected from %s:%u\n",
+    projectLog.printf("pollTcpServer: TCP client connected from %s:%u\n",
                   tcpClient.remoteIP().toString().c_str(),
                   tcpClient.remotePort());
 
     if (!sendTcpChunk(reinterpret_cast<const uint8_t *>(kTcpConnectionBanner),
                       sizeof(kTcpConnectionBanner) - 1))
     {
-        Serial.println("pollTcpServer: failed to send connection banner");
+        projectLog.println("pollTcpServer: failed to send connection banner");
     }
 }

@@ -99,7 +99,7 @@ uint32_t createBestEffortNetworkQueue()
 {
     uint32_t queueLength = getConfiguredNetworkTxQueueLength();
 
-    Serial.printf("initTcpServer: configured TX queue length %u chunks\n",
+    projectLog.printf("initTcpServer: configured TX queue length %u chunks\n",
                   (unsigned)queueLength);
 
     while (queueLength >= (uint32_t)kNetworkTxQueueMinLength)
@@ -114,7 +114,7 @@ uint32_t createBestEffortNetworkQueue()
             return queueLength;
         }
 
-        Serial.printf("initTcpServer: queue length %u failed in PSRAM and internal RAM, trying smaller queue\n",
+        projectLog.printf("initTcpServer: queue length %u failed in PSRAM and internal RAM, trying smaller queue\n",
                       (unsigned)queueLength);
 
         if (queueLength == (uint32_t)kNetworkTxQueueMinLength)
@@ -149,7 +149,7 @@ void initTcpServer()
     tcpClientConnected = false;
     actualNetworkTxQueueLength = createBestEffortNetworkQueue();
 
-    Serial.printf("PSRAM: found=%s total=%u free=%u max=%u\n",
+    projectLog.printf("PSRAM: found=%s total=%u free=%u max=%u\n",
                   psramFound() ? "yes" : "no",
                   (unsigned)ESP.getPsramSize(),
                   (unsigned)ESP.getFreePsram(),
@@ -168,13 +168,13 @@ void initTcpServer()
 
     if (actualNetworkTxQueueLength == 0)
     {
-        Serial.printf("TCP servers started: stream=%u cmd=%u without TX queue\n",
+        projectLog.printf("TCP servers started: stream=%u cmd=%u without TX queue\n",
                       kTcpServerPort,
                       kTcpCommandPort);
         return;
     }
 
-    Serial.printf("TCP servers started: stream=%u cmd=%u, queue %u x %u bytes, storage=%s\n",
+    projectLog.printf("TCP servers started: stream=%u cmd=%u, queue %u x %u bytes, storage=%s\n",
                   kTcpServerPort,
                   kTcpCommandPort,
                   (unsigned)actualNetworkTxQueueLength,

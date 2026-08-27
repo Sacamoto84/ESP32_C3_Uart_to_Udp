@@ -27,11 +27,15 @@ EEPROM::EEPROM()
     db.init(kk::staticIp, "192.168.0.222");
     db.init(kk::staticGateway, "192.168.0.1");
     db.init(kk::staticSubnet, "255.255.255.0");
-    db.init(kk::wifiPower, WIFI_POWER_8_5dBm);
+    // GyverDB хранит enum как бинарный блок, который при чтении через int
+    // превращается в 0. Храним код мощности именно как int. Вызов init также
+    // мигрирует старую enum-запись к корректному типу при загрузке БД.
+    db.init(kk::wifiPower, (int)WIFI_POWER_8_5dBm);
     db.init(kk::screenBrightness, 207);
     db.init(kk::networkTxQueueLength, kDefaultNetworkTxQueueLength);
     db.init(kk::serialRxBufferKb, kDefaultSerialRxBufferKb);
     db.init(kk::statusLedBrightness, kDefaultStatusLedBrightness);
     db.init(kk::statusLedEnabled, kDefaultStatusLedEnabled);
     db.init(kk::statusLedActiveLow, kDefaultStatusLedActiveLow);
+    db.init(kk::tcpEsp32LogEnabled, true);
 }

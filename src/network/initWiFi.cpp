@@ -16,7 +16,7 @@ bool loadStaticIpConfig(IPAddress &localIp, IPAddress &gateway, IPAddress &subne
 
     if (!ok)
     {
-        Serial.println("Static IP enabled, but one of the IP fields is invalid. Falling back to DHCP");
+        projectLog.println("Static IP enabled, but one of the IP fields is invalid. Falling back to DHCP");
     }
 
     return ok;
@@ -112,16 +112,16 @@ void initWiFi()
         {
             if (WiFi.config(localIp, gateway, subnet))
             {
-                Serial.print("Static IP enabled: ");
-                Serial.print(localIp);
-                Serial.print(" gateway ");
-                Serial.print(gateway);
-                Serial.print(" subnet ");
-                Serial.println(subnet);
+                projectLog.print("Static IP enabled: ");
+                projectLog.print(localIp);
+                projectLog.print(" gateway ");
+                projectLog.print(gateway);
+                projectLog.print(" subnet ");
+                projectLog.println(subnet);
             }
             else
             {
-                Serial.println("WiFi.config failed, falling back to DHCP");
+                projectLog.println("WiFi.config failed, falling back to DHCP");
             }
         }
     }
@@ -132,7 +132,7 @@ void initWiFi()
     const int requestedPower = sanitizeConfiguredWifiTxPower(savedPower);
     if (requestedPower != savedPower)
     {
-        Serial.printf("WiFi TX power: saved value %d is unsupported, reset to %d\n",
+        projectLog.printf("WiFi TX power: saved value %d is unsupported, reset to %d\n",
                       savedPower,
                       requestedPower);
         db.set(kk::wifiPower, requestedPower);
@@ -141,7 +141,7 @@ void initWiFi()
 
     const bool txPowerApplied = WiFi.setTxPower((wifi_power_t)requestedPower);
     const int actualPower = WiFi.getTxPower();
-    Serial.printf("WiFi TX power: saved=%d requested=%d actual=%d (%s), apply=%s\n",
+    projectLog.printf("WiFi TX power: saved=%d requested=%d actual=%d (%s), apply=%s\n",
                   savedPower,
                   requestedPower,
                   actualPower,
@@ -165,8 +165,8 @@ void initWiFi()
             renderWiFiStartupScreen("Connecting", powerLabel.c_str(), count + 1, nullptr);
         }
 #endif
-        Serial.print(db.get(kk::wifiPower));
-        Serial.print(".");
+        projectLog.print(db.get(kk::wifiPower));
+        projectLog.print(".");
         delay(500);
         count++;
 
@@ -178,8 +178,8 @@ void initWiFi()
 #if PROJECT_HAS_SCREEN
         renderWiFiStartupScreen("Connecting", "8.5 dBm", 0, "Retry power");
 #endif
-        Serial.println("\nWifi STA not found");
-        Serial.println("Lowering power to 8.5dBm");
+        projectLog.println("\nWifi STA not found");
+        projectLog.println("Lowering power to 8.5dBm");
 
         WiFi.setTxPower(WIFI_POWER_8_5dBm);
         WiFi.begin(db.get(kk::WIFI_SSID), db.get(kk::WIFI_PASS));
@@ -190,7 +190,7 @@ void initWiFi()
 #if PROJECT_HAS_SCREEN
             renderWiFiStartupScreen("Connecting", "8.5 dBm", count + 1, "Retry power");
 #endif
-            Serial.print(".");
+            projectLog.print(".");
             delay(500);
             count++;
 
@@ -199,7 +199,7 @@ void initWiFi()
                 continue;
             }
 
-            Serial.println("Wifi STA not found");
+            projectLog.println("Wifi STA not found");
             needAP = true;
             break;
         }
@@ -212,7 +212,7 @@ void initWiFi()
 #if PROJECT_HAS_SCREEN
         renderWiFiStartupScreen("Starting AP", "AP ESP32", 0, nullptr);
 #endif
-        Serial.println("Starting access point");
+        projectLog.println("Starting access point");
         WiFi.mode(WIFI_AP);
         WiFi.softAP("AP ESP32");
         sendStatusLedCommand(StatusLedCommand::AccessPoint);
@@ -235,7 +235,7 @@ void initWiFi()
     }
 #endif
 
-    Serial.println();
-    Serial.print("Connected: ");
-    Serial.println(needAP ? WiFi.softAPIP() : WiFi.localIP());
+    projectLog.println();
+    projectLog.print("Connected: ");
+    projectLog.println(needAP ? WiFi.softAPIP() : WiFi.localIP());
 }

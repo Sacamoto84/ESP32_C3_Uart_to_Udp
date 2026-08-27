@@ -44,7 +44,7 @@ long getMemoryDelta(uint32_t before, uint32_t after)
 // Пишет в лог состояние памяти до попытки аллокации UART-драйвера.
 void logUartMemorySnapshot(const char *stage, int bufferKb, const MemorySnapshot &snapshot)
 {
-    Serial.printf("UART RX alloc %s %d KB: heap=%u/%u maxHeapBlock=%u psram=%u/%u maxPsramBlock=%u\n",
+    projectLog.printf("UART RX alloc %s %d KB: heap=%u/%u maxHeapBlock=%u psram=%u/%u maxPsramBlock=%u\n",
                   stage,
                   bufferKb,
                   (unsigned)snapshot.freeHeap,
@@ -61,7 +61,7 @@ void logUartMemoryDelta(int bufferKb,
                         const MemorySnapshot &before,
                         const MemorySnapshot &after)
 {
-    Serial.printf("UART RX alloc after %d KB result=%d: freeHeap=%u (%ld) maxHeapBlock=%u (%ld) freePsram=%u (%ld) maxPsramBlock=%u (%ld)\n",
+    projectLog.printf("UART RX alloc after %d KB result=%d: freeHeap=%u (%ld) maxHeapBlock=%u (%ld) freePsram=%u (%ld) maxPsramBlock=%u (%ld)\n",
                   bufferKb,
                   (int)result,
                   (unsigned)after.freeHeap,
@@ -97,7 +97,7 @@ int installUartDriverBestEffort()
 {
     int bufferKb = getConfiguredSerialRxBufferKb();
 
-    Serial.printf("UART RX buffer configured %d KB\n", bufferKb);
+    projectLog.printf("UART RX buffer configured %d KB\n", bufferKb);
 
     while (bufferKb >= kSerialRxBufferMinKb)
     {
@@ -118,11 +118,11 @@ int installUartDriverBestEffort()
 
         if (result == ESP_OK)
         {
-            Serial.printf("UART driver started, RX buffer %d KB\n", bufferKb);
+            projectLog.printf("UART driver started, RX buffer %d KB\n", bufferKb);
             return bufferKb;
         }
 
-        Serial.printf("uart_driver_install failed for RX buffer %d KB: %d\n",
+        projectLog.printf("uart_driver_install failed for RX buffer %d KB: %d\n",
                       bufferKb,
                       (int)result);
 
@@ -157,20 +157,20 @@ void initUART()
     const esp_err_t configResult = uart_param_config(UART_NUM_0, &config);
     if (configResult != ESP_OK)
     {
-        Serial.printf("uart_param_config failed: %d\n", (int)configResult);
+        projectLog.printf("uart_param_config failed: %d\n", (int)configResult);
         return;
     }
 
     if (installUartDriverBestEffort() == 0)
     {
-        Serial.println("UART driver start failed: RX buffer was not allocated");
+        projectLog.println("UART driver start failed: RX buffer was not allocated");
         return;
     }
 
     const esp_err_t pinResult = uart_set_pin(UART_NUM_0, UART_TX_PIN, UART_RX_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
     if (pinResult != ESP_OK)
     {
-        Serial.printf("uart_set_pin failed: %d\n", (int)pinResult);
+        projectLog.printf("uart_set_pin failed: %d\n", (int)pinResult);
         return;
     }
 #if defined(HW_VARIANT_ESP32_S2_MINI)
@@ -179,7 +179,7 @@ void initUART()
     uart_flush_input(UART_NUM_0);
     if (xTaskCreate(uartTask, "uartTask", 10000, nullptr, 1, nullptr) != pdPASS)
     {
-        Serial.println("uartTask create failed");
+        projectLog.println("uartTask create failed");
         return;
     }
 
@@ -205,7 +205,7 @@ void uartTask(void *arg)
 
         if (event.type == UART_FIFO_OVF || event.type == UART_BUFFER_FULL)
         {
-            Serial.println("UART overflow event, flushing driver input buffer");
+            projectLog.println("UART overflow event, flushing driver input buffer");
             uart_flush_input(UART_NUM_0);
             xQueueReset(uartQueue);
             continue;
@@ -223,13 +223,13 @@ void uartTask(void *arg)
 
         if (available <= 0)
         {
-            Serial.printf("UART read skipped, available=%d\n", available);
+            projectLog.printf("UART read skipped, available=%d\n", available);
             continue;
         }
 
         if (available >= (int)sizeof(uartDataBuffer))
         {
-            Serial.printf("UART local buffer clamp: %d -> %u\n", available, (unsigned)(sizeof(uartDataBuffer) - 1));
+            projectLog.printf("UART local buffer clamp: %d -> %u\n", available, (unsigned)(sizeof(uartDataBuffer) - 1));
             available = sizeof(uartDataBuffer) - 1;
         }
 
@@ -238,10 +238,10 @@ void uartTask(void *arg)
         {
             uartDataBuffer[available] = '\0';
 
-            // Оставляем читаемую копию в Serial-логе, чтобы можно было глазами
+            // Оставляем читаемую копию в projectLog-логе, чтобы можно было глазами
             // увидеть, что именно уходит из UART в транспортный слой.
-            Serial.println("NET_tx echo:");
-            Serial.println(uartDataBuffer);
+            projectLog.println("NET_tx echo:");
+            projectLog.println(uartDataBuffer);
         }
 
         const size_t queued = enqueueNetworkTxData((const uint8_t *)uartDataBuffer, (size_t)available);
@@ -249,14 +249,14 @@ void uartTask(void *arg)
 
         if (queued < (size_t)available)
         {
-            Serial.printf("UART -> network queue overflow: queued %u of %u bytes, dropped total %u\n",
+            projectLog.printf("UART -> network queue overflow: queued %u of %u bytes, dropped total %u\n",
                           (unsigned)queued,
                           (unsigned)available,
                           (unsigned)getDroppedNetworkTxBytes());
         }
         else if (PROJECT_UART_VERBOSE_LOG_ENABLED)
         {
-            Serial.printf("TX to network queue: %u bytes, total TX: %d\n",
+            projectLog.printf("TX to network queue: %u bytes, total TX: %d\n",
                           (unsigned)queued,
                           eeprom.all_TX_to_network);
         }

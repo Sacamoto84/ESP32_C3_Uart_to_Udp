@@ -59,7 +59,7 @@ void initDisplay()
 
     if (!display.begin())
     {
-        Serial.println(F("u8g2 init failed"));
+        projectLog.println(F("u8g2 init failed"));
         for (;;)
             ;
     }

@@ -7,19 +7,19 @@ namespace
 constexpr uint32_t kUsbSerialBaud = 460800;
 constexpr uint32_t kResetPulseLowMs = 100;
 
-// Даёт USB Serial Monitor короткое окно на подключение, чтобы ранние логи не потерялись.
+// Даёт USB projectLog Monitor короткое окно на подключение, чтобы ранние логи не потерялись.
 void waitForBootSerialMonitor()
 {
 #if BOOT_SERIAL_DELAY_MS > 0
     const uint32_t startedAt = millis();
 
 #if defined(ARDUINO_USB_CDC_ON_BOOT) && ARDUINO_USB_CDC_ON_BOOT
-    while (!Serial && (millis() - startedAt) < (uint32_t)BOOT_SERIAL_DELAY_MS)
+    while (!projectLog && (millis() - startedAt) < (uint32_t)BOOT_SERIAL_DELAY_MS)
     {
         delay(10);
     }
 
-    if (Serial)
+    if (projectLog)
     {
         delay(200);
     }
@@ -27,10 +27,10 @@ void waitForBootSerialMonitor()
     delay(BOOT_SERIAL_DELAY_MS);
 #endif
 
-    Serial.printf("Boot serial wait done after %u ms, limit=%u ms, connected=%s\n",
+    projectLog.printf("Boot serial wait done after %u ms, limit=%u ms, connected=%s\n",
                   (unsigned)(millis() - startedAt),
                   (unsigned)BOOT_SERIAL_DELAY_MS,
-                  Serial ? "yes" : "no");
+                  projectLog ? "yes" : "no");
 #endif
 }
 }
@@ -58,7 +58,7 @@ void initPins()
 // Запускает логирование и монтирует LittleFS, где лежит база настроек.
 void initSerialAndFS()
 {
-    Serial.begin(kUsbSerialBaud);
+    projectLog.begin(kUsbSerialBaud);
     waitForBootSerialMonitor();
     LittleFS.begin(true);
 }

@@ -22,7 +22,7 @@ size_t IRAM_ATTR enqueueNetworkTxData(const uint8_t *data, size_t len)
 
     if (networkTxQueue == nullptr)
     {
-        Serial.println("enqueueNetworkTxData: networkTxQueue is not initialized");
+        projectLog.println("enqueueNetworkTxData: networkTxQueue is not initialized");
         return 0;
     }
 
@@ -43,7 +43,7 @@ size_t IRAM_ATTR enqueueNetworkTxData(const uint8_t *data, size_t len)
 
             if (millis() - lastOverflowLogAt > 1000)
             {
-                Serial.printf("enqueueNetworkTxData: queue full, dropped %u bytes, queued chunks %u\n",
+                projectLog.printf("enqueueNetworkTxData: queue full, dropped %u bytes, queued chunks %u\n",
                               droppedNow,
                               (unsigned)uxQueueMessagesWaiting(networkTxQueue));
                 lastOverflowLogAt = millis();

@@ -33,12 +33,12 @@ void initOTA()
     }
 
     ArduinoOTA.onStart([]() {
-        Serial.printf("OTA start: %s\n", otaCommandName());
+        projectLog.printf("OTA start: %s\n", otaCommandName());
         disconnectTcpClient("OTA start: closing TCP client");
     });
 
     ArduinoOTA.onEnd([]() {
-        Serial.println("OTA end");
+        projectLog.println("OTA end");
     });
 
     ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
@@ -56,16 +56,16 @@ void initOTA()
         }
 
         lastLoggedPercent = percent;
-        Serial.printf("OTA progress: %u%%\n", percent);
+        projectLog.printf("OTA progress: %u%%\n", percent);
     });
 
     ArduinoOTA.onError([](ota_error_t error) {
-        Serial.printf("OTA error[%u]\n", (unsigned)error);
+        projectLog.printf("OTA error[%u]\n", (unsigned)error);
     });
 
     ArduinoOTA.begin();
     MDNS.enableArduino(PROJECT_OTA_PORT, PROJECT_OTA_PASSWORD_VALUE[0] != '\0');
 
     initialized = true;
-    Serial.printf("OTA ready: %s.local:%u\n", PROJECT_DEVICE_HOSTNAME, (unsigned)PROJECT_OTA_PORT);
+    projectLog.printf("OTA ready: %s.local:%u\n", PROJECT_DEVICE_HOSTNAME, (unsigned)PROJECT_OTA_PORT);
 }

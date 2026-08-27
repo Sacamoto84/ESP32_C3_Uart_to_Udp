@@ -13,7 +13,7 @@ void initMdns()
 
     if (!MDNS.begin(PROJECT_DEVICE_HOSTNAME))
     {
-        Serial.printf("mDNS start failed for %s.local\n", PROJECT_DEVICE_HOSTNAME);
+        projectLog.printf("mDNS start failed for %s.local\n", PROJECT_DEVICE_HOSTNAME);
         return;
     }
 
@@ -24,5 +24,5 @@ void initMdns()
     MDNS.addServiceTxt("http", "tcp", "board", BOARD_LABEL);
 
     initialized = true;
-    Serial.printf("mDNS ready: %s.local\n", PROJECT_DEVICE_HOSTNAME);
+    projectLog.printf("mDNS ready: %s.local\n", PROJECT_DEVICE_HOSTNAME);
 }

@@ -17,23 +17,23 @@ void handleExternalScreenUdp()
         return;
     }
 
-    Serial.printf("UDP packet received: size %d from %s\n", packetSize, udp.remoteIP().toString().c_str());
+    projectLog.printf("UDP packet received: size %d from %s\n", packetSize, udp.remoteIP().toString().c_str());
     if (packetSize == kExternalScreenFrameSize)
     {
         const int bytesRead = udp.read(display.getBufferPtr(), kExternalScreenFrameSize);
         if (bytesRead == kExternalScreenFrameSize)
         {
             display.sendBuffer();
-            Serial.println("Display updated with raw framebuffer");
+            projectLog.println("Display updated with raw framebuffer");
         }
         else
         {
-            Serial.printf("Error: read only %d bytes, expected %d\n", bytesRead, kExternalScreenFrameSize);
+            projectLog.printf("Error: read only %d bytes, expected %d\n", bytesRead, kExternalScreenFrameSize);
         }
         return;
     }
 
-    Serial.printf("Error: packet size %d bytes, expected %d\n", packetSize, kExternalScreenFrameSize);
+    projectLog.printf("Error: packet size %d bytes, expected %d\n", packetSize, kExternalScreenFrameSize);
 
     int discarded = 0;
     while (udp.available())
@@ -41,6 +41,6 @@ void handleExternalScreenUdp()
         udp.read();
         discarded++;
     }
-    Serial.printf("Discarded %d bytes from invalid packet\n", discarded);
+    projectLog.printf("Discarded %d bytes from invalid packet\n", discarded);
 #endif
 }

@@ -159,7 +159,7 @@ bool initStatusLedBackend()
 
     if (ledcSetup(kStatusLedPwmChannel, kStatusLedPwmFreq, kStatusLedPwmResolution) == 0)
     {
-        Serial.println("Status LED PWM setup failed, fallback to digital mode");
+        projectLog.println("Status LED PWM setup failed, fallback to digital mode");
         statusLedBackend = StatusLedBackend::DigitalGpio;
         writeStatusLed(false);
         return true;
@@ -355,7 +355,7 @@ void initStatusLed()
         return;
     }
 
-    Serial.printf("Status LED init: pin=%u enabled=%u active_low=%u brightness=%u\n",
+    projectLog.printf("Status LED init: pin=%u enabled=%u active_low=%u brightness=%u\n",
                   (unsigned)STATUS_LED_BOARD_PIN,
                   (unsigned)isStatusLedEnabled(),
                   (unsigned)isStatusLedActiveLow(),
@@ -387,7 +387,7 @@ void initStatusLed()
             &statusLedTaskHandle,
             kStatusLedTaskCore) != pdPASS)
     {
-        Serial.println("Status LED task create failed");
+        projectLog.println("Status LED task create failed");
         vQueueDelete(statusLedQueue);
         statusLedQueue = nullptr;
         if (statusLedPwmReady)
@@ -399,7 +399,7 @@ void initStatusLed()
         return;
     }
 
-    Serial.println("Status LED ready");
+    projectLog.println("Status LED ready");
 }
 
 // Добавляет команду в очередь LED и схлопывает переполнение для непульсовых команд.

@@ -38,7 +38,7 @@ void dispatchTcpCommandBuffer(const char *reason)
         return;
     }
 
-    Serial.printf("TCP 8900: %s%s\n",
+    projectLog.printf("TCP 8900: %s%s\n",
                   commandLine.c_str(),
                   truncated ? " [truncated]" : "");
     executeCliCommandLine(commandLine);

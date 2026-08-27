@@ -23,10 +23,12 @@
 #include <string.h>
 #include <inttypes.h>
 
+#include "esp32_log.h"
+
 #include "driver/gpio.h"
 #include "driver/uart.h"
 
-#define FW_VERSION "1.7.3"
+#define FW_VERSION "1.7.4"
 
 // Назначение пинов зависит от выбранного окружения PlatformIO и варианта платы.
 #if defined(HW_VARIANT_ESP32_S2_MINI)

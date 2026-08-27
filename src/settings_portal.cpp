@@ -39,10 +39,16 @@ namespace
         const uint32_t color = (currentPower != option.dbValue) ? 0x808080 : 0xd55f30;
         if (b.Button(id, option.label, color))
         {
-            Serial.print("Saved WiFi TX power for next restart: ");
-            Serial.println(option.label);
+            // init с int одновременно исправляет старую запись, которая могла
+            // быть сохранена как enum и при чтении давать 0.
+            db.init(kk::wifiPower, option.dbValue);
             db.set(kk::wifiPower, option.dbValue);
             db.update();
+
+            projectLog.print("Saved WiFi TX power for next restart: ");
+            projectLog.print(option.label);
+            projectLog.print(", stored=");
+            projectLog.println((int)db.get(kk::wifiPower));
             b.reload();
         }
     }
@@ -67,12 +73,12 @@ namespace
         const char *ip = b.build.value.c_str();
         if (!isValidIp(ip))
         {
-            Serial.printf("Invalid IP for %s: %s\n", label, ip);
+            projectLog.printf("Invalid IP for %s: %s\n", label, ip);
             sett.reload(true);
             return;
         }
 
-        Serial.printf("Saved %s: %s\n", label, ip);
+        projectLog.printf("Saved %s: %s\n", label, ip);
         db.set(key, ip);
         db.update();
         sett.reload(true);
@@ -199,6 +205,24 @@ void buildSettingsPage(sets::Builder &b)
         b.Input(kk::WIFI_PASS, "Password");
     }
 
+    {
+        sets::Group g(b, "Диагностика");
+        if (b.Switch(kk::tcpEsp32LogEnabled, "Логи ESP32 в TCP 8888"))
+        {
+            const bool enabled = db.get(kk::tcpEsp32LogEnabled);
+            setTcpEsp32LogEnabled(enabled);
+            db.update();
+
+            if (enabled)
+            {
+                projectLog.println("TCP ESP32 logging enabled");
+            }
+
+            b.reload();
+        }
+        b.Label("Формат TCP-лога", "[esp32] сообщение");
+    }
+
      {
         sets::Group g(b, "IP");
 
@@ -218,32 +242,6 @@ void buildSettingsPage(sets::Builder &b)
         }
     }
 
-
-
-#if PROJECT_HAS_SCREEN
-    b.Switch(kk::externalScreen, "Внешний экран по UDP 82 порту");
-#endif
-
-    if (b.Button("Перезагрузка ESP32"))
-    {
-        ESP.restart();
-    }
-
-    // Аппаратный импульс сброса на внешнее устройство.
-    if (b.Button("Выход -> Сброс", 0x25b18f))
-    {
-        Serial.println("Выход -> Сброс");
-        pulseResetLine();
-    }
-
-    // Полная очистка базы настроек.
-    if (b.Button("Очистка базы", 0x25b18f))
-    {
-        Serial.println("Очистка базы");
-        db.clear();
-        db.update();
-    }
-
     {
         // Отдельное меню выбора мощности Wi-Fi передатчика.
         sets::Menu m(b, "Мощность Wifi");
@@ -261,6 +259,31 @@ void buildSettingsPage(sets::Builder &b)
             ESP.restart();
         }
     }
+
+#if PROJECT_HAS_SCREEN
+    b.Switch(kk::externalScreen, "Внешний экран по UDP 82 порту");
+#endif
+
+    if (b.Button("Перезагрузка ESP32"))
+    {
+        ESP.restart();
+    }
+
+    // Аппаратный импульс сброса на внешнее устройство.
+    if (b.Button("Выход -> Сброс", 0x25b18f))
+    {
+        projectLog.println("Выход -> Сброс");
+        pulseResetLine();
+    }
+
+    // Полная очистка базы настроек.
+    if (b.Button("Очистка базы", 0x25b18f))
+    {
+        projectLog.println("Очистка базы");
+        db.clear();
+        db.update();
+    }
+
 
     b.Label("Версия " FW_VERSION);
 }

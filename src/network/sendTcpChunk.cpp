@@ -34,7 +34,7 @@ bool sendTcpChunk(const uint8_t *payload, size_t len)
 
         if (millis() - lastProgressAt > kTcpWriteTimeoutMs)
         {
-            Serial.printf("sendTcpChunk: write timeout after %u ms\n", kTcpWriteTimeoutMs);
+            projectLog.printf("sendTcpChunk: write timeout after %u ms\n", kTcpWriteTimeoutMs);
             disconnectTcpClient(nullptr);
             return false;
         }

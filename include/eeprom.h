@@ -52,7 +52,8 @@ DB_KEYS(
     serialRxBufferKb,
     statusLedBrightness,
     statusLedEnabled,
-    statusLedActiveLow);
+    statusLedActiveLow,
+    tcpEsp32LogEnabled);
 
 // Небольшой одиночный хелпер, который гарантирует однократную инициализацию БД настроек.
 class EEPROM

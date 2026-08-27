@@ -22,7 +22,7 @@ void sendCliResponse(const String &message)
         return;
     }
 
-    Serial.println(message);
+    projectLog.println(message);
     tcpCommandClient.print(message);
     tcpCommandClient.print("\n");
     tcpCommandClient.flush();
@@ -118,7 +118,7 @@ void initCommandCli()
     gResetPulseCommand = cli.addCmd("resetpulse");
     gResetPulseCommand.setDescription("Send low pulse to RESET_PULSE_PIN");
 
-    Serial.println("SimpleCLI initialized");
+    projectLog.println("SimpleCLI initialized");
 }
 
 // Нормализует входящую строку и передаёт её в парсер SimpleCLI.

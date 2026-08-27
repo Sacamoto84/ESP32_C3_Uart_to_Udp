@@ -18,6 +18,7 @@ void setup()
     initSerialAndFS();
     // База настроек должна существовать до любого модуля, читающего db.get(...).
     EEPROM::getInstance();
+    setTcpEsp32LogEnabled(db.get(kk::tcpEsp32LogEnabled));
     initStatusLed();
     initDisplay();
     initWiFi();

@@ -7,7 +7,7 @@ void disconnectTcpClient(const char *reason)
 {
     if (reason != nullptr && reason[0] != '\0')
     {
-        Serial.println(reason);
+        projectLog.println(reason);
     }
 
     tcpClient.stop();
