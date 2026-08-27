@@ -83,10 +83,9 @@ void screenLoop()
     const IPAddress ip = isAccessPointMode() ? WiFi.softAPIP() : WiFi.localIP();
 
     char line[48];
-#if SCREEN_WIDTH != 72 || SCREEN_HEIGHT != 40
+
     const long rssi = WiFi.RSSI();
     char rssiText[16];
-#endif
 
     prepareTextFrame();
 
@@ -94,14 +93,9 @@ void screenLoop()
     display.setCursor(0, kStatusLine0Y);
     display.print(line);
 
-#if SCREEN_WIDTH == 72 && SCREEN_HEIGHT == 40
-    // На OLED 72x40 в одну строку помещается только IP-адрес.
-    // RSSI оставляем в Serial-логе, чтобы не ухудшать читаемость экрана.
-#else
     std::snprintf(rssiText, sizeof(rssiText), "%ld", rssi);
     display.setCursor(SCREEN_WIDTH - display.getStrWidth(rssiText), kStatusLine0Y);
     display.print(rssiText);
-#endif
 
     display.setCursor(0, kStatusLine1Y);
 #if SCREEN_WIDTH == 72 && SCREEN_HEIGHT == 40
@@ -120,6 +114,7 @@ void screenLoop()
     display.print(line);
 
     display.setCursor(0, kStatusLine4Y);
+
     if (getNetworkTxQueueCapacity() == 0)
     {
         display.print("Q ERR");
@@ -131,5 +126,6 @@ void screenLoop()
     }
 
     display.sendBuffer();
+
 #endif
 }

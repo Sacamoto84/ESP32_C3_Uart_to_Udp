@@ -26,7 +26,7 @@
 #include "driver/gpio.h"
 #include "driver/uart.h"
 
-#define FW_VERSION "1.7.2"
+#define FW_VERSION "1.7.3"
 
 // Назначение пинов зависит от выбранного окружения PlatformIO и варианта платы.
 #if defined(HW_VARIANT_ESP32_S2_MINI)

@@ -127,8 +127,26 @@ void initWiFi()
     }
 
     // Мощность берём из настроек; позже можем понизить её до 8.5 dBm при ретрае.
-    const int power = db.get(kk::wifiPower);
-    WiFi.setTxPower((wifi_power_t)power);
+    // Старые/повреждённые значения не позволяем применить выше 19.5 dBm.
+    const int savedPower = db.get(kk::wifiPower);
+    const int requestedPower = sanitizeConfiguredWifiTxPower(savedPower);
+    if (requestedPower != savedPower)
+    {
+        Serial.printf("WiFi TX power: saved value %d is unsupported, reset to %d\n",
+                      savedPower,
+                      requestedPower);
+        db.set(kk::wifiPower, requestedPower);
+        db.update();
+    }
+
+    const bool txPowerApplied = WiFi.setTxPower((wifi_power_t)requestedPower);
+    const int actualPower = WiFi.getTxPower();
+    Serial.printf("WiFi TX power: saved=%d requested=%d actual=%d (%s), apply=%s\n",
+                  savedPower,
+                  requestedPower,
+                  actualPower,
+                  WifiCurrentPowerString(actualPower).c_str(),
+                  txPowerApplied ? "ok" : "failed");
     WiFi.begin(db.get(kk::WIFI_SSID), db.get(kk::WIFI_PASS));
     sendStatusLedCommand(StatusLedCommand::ConnectingToStation);
 

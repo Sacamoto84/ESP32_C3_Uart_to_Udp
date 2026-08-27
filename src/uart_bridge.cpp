@@ -183,8 +183,9 @@ void initUART()
         return;
     }
 
-    const char *banner = "UART to TCP server " BOARD_LABEL " V" FW_VERSION "\n";
-    enqueueNetworkTxData((const uint8_t *)banner, strlen(banner));
+    // Стартовый баннер отправляется из pollTcpServer() непосредственно новому
+    // TCP-клиенту. Не кладём его в очередь: при отсутствии клиента она
+    // специально дренируется и баннер успевал бы считаться потерянным.
 }
 
 // Обрабатывает события UART, читает входящие байты и ставит их в сетевую очередь.

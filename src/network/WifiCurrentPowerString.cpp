@@ -22,6 +22,21 @@ constexpr WifiPowerLabel kWifiPowerLabels[] = {
     {WIFI_POWER_18_5dBm, "18.5 dBm"},
     {WIFI_POWER_19dBm, "19 dBm"},
     {WIFI_POWER_19_5dBm, "19.5 dBm"},
+    {80, "20 dBm"},
+};
+
+// Список значений, которые пользователь может сохранить через портал.
+// Намеренно ограничен 19.5 dBm (78): код 80 не должен переживать перезагрузку.
+constexpr int kConfiguredWifiPowerValues[] = {
+    WIFI_POWER_MINUS_1dBm,
+    WIFI_POWER_2dBm,
+    WIFI_POWER_8_5dBm,
+    WIFI_POWER_11dBm,
+    WIFI_POWER_13dBm,
+    WIFI_POWER_15dBm,
+    WIFI_POWER_17dBm,
+    WIFI_POWER_19dBm,
+    WIFI_POWER_19_5dBm,
 };
 }
 
@@ -37,4 +52,22 @@ String WifiCurrentPowerString(int power)
     }
 
     return String(power) + " raw";
+}
+
+int sanitizeConfiguredWifiTxPower(int power)
+{
+    for (const int allowedPower : kConfiguredWifiPowerValues)
+    {
+        if (allowedPower == power)
+        {
+            return power;
+        }
+    }
+
+    if (power == 80)
+    {
+        return WIFI_POWER_19_5dBm;
+    }
+
+    return WIFI_POWER_8_5dBm;
 }

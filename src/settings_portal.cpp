@@ -33,17 +33,16 @@ namespace
         {78, "19.5dBm (78)"},
     };
 
-    // Рисует одну кнопку мощности Wi-Fi и сразу применяет пресет при нажатии.
+    // Рисует одну кнопку мощности Wi-Fi и сохраняет пресет для следующего старта.
     void addWifiPowerButton(sets::Builder &b, size_t id, const WifiPowerOption &option, int currentPower)
     {
         const uint32_t color = (currentPower != option.dbValue) ? 0x808080 : 0xd55f30;
         if (b.Button(id, option.label, color))
         {
-            Serial.print("Set TX power to ");
+            Serial.print("Saved WiFi TX power for next restart: ");
             Serial.println(option.label);
             db.set(kk::wifiPower, option.dbValue);
             db.update();
-            WiFi.setTxPower((wifi_power_t)option.dbValue);
             b.reload();
         }
     }
@@ -250,10 +249,16 @@ void buildSettingsPage(sets::Builder &b)
         sets::Menu m(b, "Мощность Wifi");
         b.enterMenu();
         const int currentPower = db.get(kk::wifiPower);
-        b.Label("Мощность", WifiCurrentPowerString(WiFi.getTxPower()));
+        b.Label("Сейчас", WifiCurrentPowerString(WiFi.getTxPower()));
+        b.Label("После перезагрузки", WifiCurrentPowerString(currentPower));
         for (size_t i = 0; i < sizeof(kWifiPowerOptions) / sizeof(WifiPowerOption); ++i)
         {
             addWifiPowerButton(b, 1000 + i, kWifiPowerOptions[i], currentPower);
+        }
+
+        if (b.Button("Перезагрузка ESP32"))
+        {
+            ESP.restart();
         }
     }
 

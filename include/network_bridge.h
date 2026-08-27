@@ -8,6 +8,11 @@ constexpr int kNetworkTxQueueMaxLength = 1024;
 // Преобразует код мощности Wi-Fi в понятную строку для интерфейса и логов.
 String WifiCurrentPowerString(int power);
 
+// Ограничивает сохранённую настройку мощности Wi-Fi доступными в портале
+// пресетами. Устаревший код 80 (20 dBm) понижается до 19.5 dBm, а неизвестные
+// повреждённые значения заменяются безопасным значением 8.5 dBm.
+int sanitizeConfiguredWifiTxPower(int power);
+
 // Подключает устройство к Wi-Fi или переводит его в режим точки доступа при неудаче.
 void initWiFi();
 
